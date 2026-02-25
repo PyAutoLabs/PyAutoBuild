@@ -15,6 +15,7 @@ autogalaxy:
 - png_make.py # Test mode does not output .png images.
 - source_reconstruction # csv file not output in test mode.
 - example_cpu # HPC paths dont exist locally.
+- searches # Test mode breaks search visualization.
 autolens:
 - tutorial_searches
 - features
@@ -32,6 +33,7 @@ autolens:
 - time_delays # Test mode does not support cosmology ift
 - source_reconstruction # csv file not output in test mode.
 - example_cpu # HPC paths dont exist locally.
+- searches # Test mode breaks search visualization.
 autofit_test:
 - Drawer # Only works with sensitivity mapper to not raise InitializerException.
 - session/general # Session mostly works but not maintaining currently.
