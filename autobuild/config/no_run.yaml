@@ -13,9 +13,9 @@ autogalaxy:
 - extra_galaxies_centres # GUI scripts cannot be run
 - fits_make.py # Test mode does not output .fits images.
 - png_make.py # Test mode does not output .png images.
-- source_reconstruction # csv file not output in test mode.
 - example_cpu # HPC paths dont exist locally.
 - searches # Test mode breaks search visualization.
+- data_fitting # Test mode breaks .fits file output
 autolens:
 - tutorial_searches
 - features
@@ -31,9 +31,9 @@ autolens:
 - fits_make # Test mode does not output .fits images.
 - png_make # Test mode does not output .png images.
 - time_delays # Test mode does not support cosmology ift
-- source_reconstruction # csv file not output in test mode.
 - example_cpu # HPC paths dont exist locally.
 - searches # Test mode breaks search visualization.
+- data_fitting # Test mode breaks .fits file output
 autofit_test:
 - Drawer # Only works with sensitivity mapper to not raise InitializerException.
 - session/general # Session mostly works but not maintaining currently.
