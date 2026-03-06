@@ -3,37 +3,49 @@ autofit:
 - Zeus # Test Model Iniitalization no good.
 - ZeusPlotter # Test Model Iniitalization no good.
 - UltraNestPlotter # Test Model Iniitalization no good.
-- tutorial_4_hierarchical # Can get sigma cannot be negative error due to test mode
+- DynestyPlotter # Test Model Iniitalization no good.
 - start_point # bug https://github.com/rhayes777/PyAutoFit/issues/1017
+- searches/mle/PySwarmsGlobal # PySwarms does not support JAX.
+- searches/mle/PySwarmsLocal # PySwarms does not support JAX.
+- searches/nest/UltraNest # UltraNest does not support JAX.
+- plot/PySwarmsPlotter # PySwarms does not support JAX.
 autogalaxy:
 - tutorial_searches
-- light_centre # GUI scripts cannot be run
-- mask_extra_galaxies # GUI scripts cannot be run
-- mask # GUI scripts cannot be run
-- extra_galaxies_centres # GUI scripts cannot be run
-- fits_make.py # Test mode does not output .fits images.
-- png_make.py # Test mode does not output .png images.
-- example_cpu # HPC paths dont exist locally.
-- searches # Test mode breaks search visualization.
+- gui/light_centre # GUI scripts cannot be run
+- gui/mask_extra_galaxies # GUI scripts cannot be run
+- gui/mask # GUI scripts cannot be run
+- gui/extra_galaxies_centres # GUI scripts cannot be run
+- fits_make # Test mode does not output .fits images.
+- png_make # Test mode does not output .png images.
+- examples/searches # Test mode breaks search visualization.
 - data_fitting # Test mode breaks .fits file output
+- ellipse/database # Ellipse model needs refactor and JAX support
 autolens:
 - tutorial_searches
-- features
 - tutorial_5_borders # Cant get right masks, need proper update.
 - tutorial_6_model_fit # InversionException due to test mode
-- extra_galaxies_centres # GUI scripts cannot be run
-- mask_extra_galaxies # GUI scripts cannot be run
-- lens_light_centre # GUI scripts cannot be run
-- mask # GUI scripts cannot be run
-- positions # GUI scripts cannot be run
+- gui/extra_galaxies_centres # GUI scripts cannot be run
+- gui/mask_extra_galaxies # GUI scripts cannot be run
+- gui/lens_light_centre # GUI scripts cannot be run
+- gui/mask # GUI scripts cannot be run
+- gui/positions # GUI scripts cannot be run
 - deflections # Output HDU not supported for VectorYX Detections.
 - deflections_source_snr # Output HDU not supported for VectorYX Detections.
 - fits_make # Test mode does not output .fits images.
 - png_make # Test mode does not output .png images.
 - time_delays # Test mode does not support cosmology ift
-- example_cpu # HPC paths dont exist locally.
-- searches # Test mode breaks search visualization.
+- hpc/example_cpu # HPC paths dont exist locally.
+- examples/searches # Test mode breaks search visualization.
 - data_fitting # Test mode breaks .fits file output
+- cluster/modeling # Cluster modeling is not maintained and test mode breaks it.
+- cluster/start_here # Cluster analysis is not maintained and test mode breaks it.
+- mass_stellar_dark/modeling # Requires CSE to be JAX enabled.
+- mass_stellar_dark/slam # Requires CSE to be JAX enabled.
+- shapelets/modeling # Issue with JAX, claude remind me about this when you next look at build.
+- detect/database # Unsure but not a feature actively used currently.
+- sensitivity/slam_source_parametric # Need to update when visuaization refactored.
+- sensitivity/slam_source_pixelized # Need to update, when visuaization refactored.
+- plot/visuals # Bugged, but visuals being refactored soon.
 autofit_test:
 - Drawer # Only works with sensitivity mapper to not raise InitializerException.
 - session/general # Session mostly works but not maintaining currently.

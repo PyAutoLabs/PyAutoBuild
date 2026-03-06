@@ -51,6 +51,25 @@ def no_run_list_with_extension_from(no_run_list: List[str], extension: str):
     return no_run_list
 
 
+def should_skip(file: Path, no_run_list: List[str]) -> bool:
+    """
+    Return True if the file matches any entry in no_run_list.
+
+    Entries with a '/' are treated as path-specific patterns: the file is
+    skipped only if that pattern appears in the file's path (without extension).
+    Entries without a '/' match any file whose stem equals the entry.
+    """
+    file_path_no_ext = str(file.with_suffix(""))
+    for pattern in no_run_list:
+        if "/" in pattern:
+            if pattern in file_path_no_ext:
+                return True
+        else:
+            if file.stem == pattern:
+                return True
+    return False
+
+
 def execute_notebook(f):
     print(f"Running <{f}> at {datetime.datetime.now().isoformat()}")
 
@@ -88,7 +107,7 @@ def execute_notebooks_in_folder(
                 )
             ):
                 continue
-        if file.stem not in no_run_list:
+        if not should_skip(file, no_run_list):
             execute_notebook(file)
 
 
@@ -147,5 +166,5 @@ def execute_scripts_in_folder(directory, no_run_list=None):
     print(f"Found {len(files)} scripts")
 
     for file in files:
-        if file.stem not in no_run_list:
+        if not should_skip(file, no_run_list):
             execute_script(str(file))

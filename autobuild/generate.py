@@ -45,15 +45,18 @@ if __name__ == "__main__":
         if f.name != "welcome.py"
     ]
 
+    for old_notebook in path.glob("start_here*.ipynb"):
+        os.remove(old_notebook)
+
     for start_here_file in start_here_files:
 
-        build_util.py_to_notebook(start_here_file)
+        notebook = build_util.py_to_notebook(start_here_file)
+        os.system(f"git add -f {notebook}")
 
     scripts_path = Path(f"{WORKSPACE_PATH}/scripts")
     notebooks_path = notebook_path_(scripts_path)
 
-    for notebook_path in notebooks_path.rglob("*.ipynb*"):
-        os.remove(notebook_path)
+    shutil.rmtree(WORKSPACE_PATH / "notebooks", ignore_errors=True)
 
     for script_path in scripts_path.rglob("*.py"):
         if script_path.name == "__init__.py":
@@ -66,4 +69,7 @@ if __name__ == "__main__":
             os.remove(source_path)
 
     for read_me_path in scripts_path.rglob("*.rst"):
+        copy_to_notebooks(read_me_path)
+
+    for read_me_path in scripts_path.rglob("*.md"):
         copy_to_notebooks(read_me_path)
