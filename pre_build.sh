@@ -19,6 +19,7 @@ run_workspace() {
     local repo="$1"
     local project="$2"
     local generate="${3:-true}"
+    local slam="${4:-false}"
     local dir="$PYAUTOBASE/$repo"
 
     echo ""
@@ -34,11 +35,18 @@ run_workspace() {
         PYTHONPATH="$PYTHONPATH_EXTRA" python "$AUTOBUILD/generate.py" "$project"
     fi
 
-    echo "  Adding dataset folder..."
+    echo "  Staging safe directories..."
     git add -f dataset/
+    for d in config notebooks scripts; do
+        [ -d "$d" ] && git add "$d/"
+    done
+    if [ "$slam" = "true" ] && [ -d "slam_pipeline" ]; then
+        git add slam_pipeline/
+    fi
+    # Stage root-level recognised files only (no output/, output_model/, or stray .fits)
+    git add -- *.py *.md *.txt *.cfg *.ini *.toml *.yml *.yaml LICENSE* requirements* setup* 2>/dev/null || true
 
     echo "  Committing and pushing..."
-    git add -A
     if git diff --cached --quiet; then
         echo "  No changes to commit."
     else
@@ -49,9 +57,9 @@ run_workspace() {
 
 run_workspace "autofit_workspace"       "autofit"
 run_workspace "autogalaxy_workspace"    "autogalaxy"
-run_workspace "autolens_workspace"      "autolens"
-run_workspace "autofit_workspace_test"  "autofit"    false
-run_workspace "autolens_workspace_test" "autolens"   false
+run_workspace "autolens_workspace"      "autolens"     true  true
+run_workspace "autofit_workspace_test"  "autofit"      false
+run_workspace "autolens_workspace_test" "autolens"     false
 
 # Commit and push PyAutoBuild itself
 echo ""
