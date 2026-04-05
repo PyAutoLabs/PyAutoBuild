@@ -571,6 +571,40 @@ jobs:
         pushd "${{ matrix.project.path }}"
         python3 -m twine upload --verbose dist/*
 
+  publish_release_notes:
+    runs-on: ubuntu-latest
+    needs:
+      - release
+      - version_number
+    if: "${{ github.event.inputs.skip_release != 'true' }}"
+    strategy:
+      fail-fast: false
+      matrix:
+        project:
+          - repo: rhayes777/PyAutoFit
+            pat: PAT_RICH
+          - repo: Jammy2211/PyAutoArray
+            pat: PAT_JAMES
+          - repo: Jammy2211/PyAutoGalaxy
+            pat: PAT_JAMES
+          - repo: Jammy2211/PyAutoLens
+            pat: PAT_JAMES
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        path: PyAutoBuild
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.12'
+    - name: Publish release notes
+      env:
+        GH_TOKEN: ${{ secrets[matrix.project.pat] }}
+      run: |
+        python3 PyAutoBuild/autobuild/generate_release_notes.py \
+          --version "${{ needs.version_number.outputs.version_number }}" \
+          --repo "${{ matrix.project.repo }}"
+
   release_workspaces:
     runs-on: ubuntu-latest
     env:
