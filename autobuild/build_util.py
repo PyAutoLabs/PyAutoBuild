@@ -4,6 +4,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 import traceback
 from pathlib import Path
 from typing import List
@@ -70,34 +71,109 @@ def should_skip(file: Path, no_run_list: List[str]) -> bool:
     return False
 
 
-def execute_notebook(f):
+def _find_skip_reason(file: Path, no_run_list: List[str], skip_reasons: dict) -> str:
+    """Find the reason a file is being skipped from the skip_reasons dict."""
+    file_path_no_ext = str(file.with_suffix(""))
+    for pattern in no_run_list:
+        if "/" in pattern:
+            if pattern in file_path_no_ext:
+                return skip_reasons.get(pattern, "No reason documented")
+        else:
+            if file.stem == pattern:
+                return skip_reasons.get(pattern, "No reason documented")
+    return "No reason documented"
+
+
+def execute_notebook(f, report=None):
     print(f"Running <{f}> at {datetime.datetime.now().isoformat()}")
 
+    start = time.time()
     try:
-        subprocess.run(
-            ["jupyter", "nbconvert", "--to", "notebook", "--execute", "--output", f, f],
-            check=True,
-            timeout=TIMEOUT_SECS,
-        )
-    except (subprocess.TimeoutExpired, subprocess.CalledProcessError) as e:
+        if report is not None:
+            result = subprocess.run(
+                ["jupyter", "nbconvert", "--to", "notebook", "--execute", "--output", f, f],
+                check=True,
+                timeout=TIMEOUT_SECS,
+                capture_output=True,
+                text=True,
+            )
+            print(result.stdout)
+            if result.stderr:
+                print(result.stderr, file=sys.stderr)
+        else:
+            subprocess.run(
+                ["jupyter", "nbconvert", "--to", "notebook", "--execute", "--output", f, f],
+                check=True,
+                timeout=TIMEOUT_SECS,
+            )
+    except subprocess.TimeoutExpired as e:
         logging.exception(e)
-
-        if "InversionException" in traceback.format_exc():
+        duration = time.time() - start
+        if report is not None:
+            from result_collector import ScriptResult, Status
+            report.results.append(ScriptResult(
+                file=str(f),
+                status=Status.TIMEOUT,
+                duration_seconds=duration,
+                error_message="Timed out after {:.0f}s".format(duration),
+            ))
             return
         sys.exit(1)
+    except subprocess.CalledProcessError as e:
+        logging.exception(e)
+        duration = time.time() - start
+
+        if "InversionException" in traceback.format_exc():
+            if report is not None:
+                from result_collector import ScriptResult, Status
+                report.results.append(ScriptResult(
+                    file=str(f),
+                    status=Status.PASSED,
+                    duration_seconds=duration,
+                    error_message="InversionException (ignored)",
+                ))
+            return
+
+        if report is not None:
+            from result_collector import ScriptResult, Status
+            stderr = getattr(e, 'stderr', '') or ''
+            report.results.append(ScriptResult(
+                file=str(f),
+                status=Status.FAILED,
+                duration_seconds=duration,
+                error_message=str(e),
+                traceback=stderr,
+            ))
+            return
+        sys.exit(1)
+
+    duration = time.time() - start
+    if report is not None:
+        from result_collector import ScriptResult, Status
+        report.results.append(ScriptResult(
+            file=str(f),
+            status=Status.PASSED,
+            duration_seconds=duration,
+        ))
 
 
 def execute_notebooks_in_folder(
     directory,
     no_run_list,
     visualise_dict=None,
+    report=None,
+    skip_reasons=None,
 ):
-    no_run_list.extend(["__init__", "README"])
+    # Infrastructure files — always skip, never report
+    infra_skip = ["__init__", "README"]
+    no_run_list.extend(infra_skip)
     files = list(Path.cwd().rglob(f"{directory}/**/*.ipynb"))
 
     print(f"Found {len(files)} notebooks")
 
     for file in sorted(files):
+        if file.stem in infra_skip:
+            continue
         if visualise_dict is not None:
             without_suffix = str(file.with_suffix(""))
             if not any(
@@ -107,27 +183,91 @@ def execute_notebooks_in_folder(
                 )
             ):
                 continue
-        if not should_skip(file, no_run_list):
-            execute_notebook(file)
+        if should_skip(file, no_run_list):
+            if report is not None:
+                from result_collector import ScriptResult, Status
+                reason = _find_skip_reason(file, no_run_list, skip_reasons or {})
+                report.results.append(ScriptResult(
+                    file=str(file),
+                    status=Status.SKIPPED,
+                    skip_reason=reason,
+                ))
+        else:
+            execute_notebook(file, report=report)
 
 
-def execute_script(f):
+def execute_script(f, report=None):
     args = [BUILD_PYTHON_INTERPRETER, f]
     print(f"Running <{args}>")
 
+    start = time.time()
     try:
-        subprocess.run(
-            args,
-            check=True,
-            timeout=TIMEOUT_SECS,
-        )
-    except (subprocess.TimeoutExpired, subprocess.CalledProcessError) as e:
+        if report is not None:
+            result = subprocess.run(
+                args,
+                check=True,
+                timeout=TIMEOUT_SECS,
+                capture_output=True,
+                text=True,
+            )
+            print(result.stdout)
+            if result.stderr:
+                print(result.stderr, file=sys.stderr)
+        else:
+            subprocess.run(
+                args,
+                check=True,
+                timeout=TIMEOUT_SECS,
+            )
+    except subprocess.TimeoutExpired as e:
         logging.exception(e)
+        duration = time.time() - start
+        if report is not None:
+            from result_collector import ScriptResult, Status
+            report.results.append(ScriptResult(
+                file=str(f),
+                status=Status.TIMEOUT,
+                duration_seconds=duration,
+                error_message="Timed out after {:.0f}s".format(duration),
+            ))
+            return
+        sys.exit(1)
+    except subprocess.CalledProcessError as e:
+        logging.exception(e)
+        duration = time.time() - start
 
         if "inversion" in f:
+            if report is not None:
+                from result_collector import ScriptResult, Status
+                report.results.append(ScriptResult(
+                    file=str(f),
+                    status=Status.PASSED,
+                    duration_seconds=duration,
+                    error_message="Inversion script failure (ignored)",
+                ))
             return
 
+        if report is not None:
+            from result_collector import ScriptResult, Status
+            stderr = getattr(e, 'stderr', '') or ''
+            report.results.append(ScriptResult(
+                file=str(f),
+                status=Status.FAILED,
+                duration_seconds=duration,
+                error_message=str(e),
+                traceback=stderr,
+            ))
+            return
         sys.exit(1)
+
+    duration = time.time() - start
+    if report is not None:
+        from result_collector import ScriptResult, Status
+        report.results.append(ScriptResult(
+            file=str(f),
+            status=Status.PASSED,
+            duration_seconds=duration,
+        ))
 
 
 def find_scripts_in_folder(directory: str) -> List[Path]:
@@ -158,13 +298,26 @@ def find_scripts_in_folder(directory: str) -> List[Path]:
     )
 
 
-def execute_scripts_in_folder(directory, no_run_list=None):
+def execute_scripts_in_folder(directory, no_run_list=None, report=None, skip_reasons=None):
     no_run_list = no_run_list or []
-    no_run_list.extend(["__init__", "README"])
+    # Infrastructure files — always skip, never report
+    infra_skip = ["__init__", "README"]
+    no_run_list.extend(infra_skip)
 
     files = find_scripts_in_folder(directory)
     print(f"Found {len(files)} scripts")
 
     for file in files:
-        if not should_skip(file, no_run_list):
-            execute_script(str(file))
+        if file.stem in infra_skip:
+            continue
+        if should_skip(file, no_run_list):
+            if report is not None:
+                from result_collector import ScriptResult, Status
+                reason = _find_skip_reason(file, no_run_list, skip_reasons or {})
+                report.results.append(ScriptResult(
+                    file=str(file),
+                    status=Status.SKIPPED,
+                    skip_reason=reason,
+                ))
+        else:
+            execute_script(str(file), report=report)

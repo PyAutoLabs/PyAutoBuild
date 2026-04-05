@@ -1,6 +1,8 @@
 name: PyAuto Release
 
 on:
+  schedule:
+    - cron: '0 2 * * 1-5'  # 2 AM UTC weekdays
   workflow_dispatch:
     inputs:
       minor_version:
@@ -165,6 +167,73 @@ jobs:
             matrix="$(./PyAutoBuild/autobuild/script_matrix.py autofit autogalaxy autolens autofit_test autolens_test)"
             echo "::set-output name=matrix::$matrix"
 
+  generate_notebooks:
+    runs-on: ubuntu-latest
+    needs:
+      - release_test_pypi
+      - version_number
+      - find_scripts
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [3.12]
+        project:
+          - name: autofit
+            repository: rhayes777/PyAutoFit
+            workspace_repository: Jammy2211/autofit_workspace
+          - name: autogalaxy
+            repository: Jammy2211/PyAutoGalaxy
+            workspace_repository: Jammy2211/autogalaxy_workspace
+          - name: autolens
+            repository: Jammy2211/PyAutoLens
+            workspace_repository: Jammy2211/autolens_workspace
+    steps:
+    - name: Skip check
+      if: "${{ github.event.inputs.skip_notebooks != 'true' }}"
+      id: should_run
+      run: echo "run=true" >> $GITHUB_OUTPUT
+    - uses: actions/checkout@v2
+      if: steps.should_run.outputs.run == 'true'
+      with:
+          path: PyAutoBuild
+    - name: Checkout workspace
+      if: steps.should_run.outputs.run == 'true'
+      uses: actions/checkout@v2
+      with:
+        repository: ${{ matrix.project.workspace_repository }}
+        ref: main
+        path: workspace
+    - name: Set up Python ${{ matrix.python-version }}
+      if: steps.should_run.outputs.run == 'true'
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      if: steps.should_run.outputs.run == 'true'
+      run: |
+        python3 -m pip install jupyter ipynb-py-convert PyYAML
+    - name: Generate notebooks
+      if: steps.should_run.outputs.run == 'true'
+      run: |
+        export PYTHONPATH=$PYTHONPATH:$(pwd)/PyAutoBuild
+        AUTOBUILD_PATH="$(pwd)/PyAutoBuild/autobuild"
+        pushd workspace
+        python3 "$AUTOBUILD_PATH/generate.py" ${{ matrix.project.name }} --report-dir generate-results
+    - name: Upload generated notebooks
+      if: always() && steps.should_run.outputs.run == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: notebooks-${{ matrix.project.name }}
+        path: workspace/notebooks/
+        retention-days: 7
+    - name: Upload generation results
+      if: always() && steps.should_run.outputs.run == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: results-generate-${{ matrix.project.name }}
+        path: workspace/generate-results/
+        retention-days: 30
+
   run_scripts:
     runs-on: ubuntu-latest
     needs:
@@ -257,7 +326,14 @@ jobs:
         fi
 
         pushd workspace
-        python3 "$AUTOBUILD_PATH/run_python.py" ${{ matrix.project.name }} "scripts/${{ matrix.project.directory }}"
+        python3 "$AUTOBUILD_PATH/run_python.py" ${{ matrix.project.name }} "scripts/${{ matrix.project.directory }}" --report-dir test-results
+    - name: Upload script results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: results-scripts-${{ matrix.project.name }}-${{ matrix.project.directory }}
+        path: workspace/test-results/
+        retention-days: 30
 
   run_notebooks:
     runs-on: ubuntu-latest
@@ -265,6 +341,7 @@ jobs:
       - release_test_pypi
       - version_number
       - find_scripts
+      - generate_notebooks
     strategy:
       fail-fast: false
       matrix:
@@ -278,7 +355,7 @@ jobs:
       run: |
         if [ ${{ matrix.project.name }} == "autofit" ]
         then
-            echo "::set-output name=repository::rhayes777/PyAutoFit"
+            echo "::set-output name=repository::Jammy2211/PyAutoGalaxy"
             echo "::set-output name=workspace_repository::Jammy2211/autofit_workspace"
             echo "::set-output name=project::autofit"
         elif [ ${{ matrix.project.name }} == "autogalaxy" ]
@@ -310,6 +387,12 @@ jobs:
         repository: ${{ steps.configure.outputs.workspace_repository }}
         ref: main
         path: workspace
+    - name: Download pre-built notebooks
+      if: "${{ github.event.inputs.skip_notebooks != 'true' }}"
+      uses: actions/download-artifact@v4
+      with:
+        name: notebooks-${{ matrix.project.name }}
+        path: workspace/notebooks/
     - name: Set up Python ${{ matrix.python-version }}
       if: "${{ github.event.inputs.skip_notebooks != 'true' }}"
       uses: actions/setup-python@v2
@@ -330,13 +413,6 @@ jobs:
       if: "${{ github.event.inputs.skip_notebooks != 'true' }}"
       run: |
         python3 -m pip install jupyter ipynb-py-convert
-    - name: Generate jupyter notebooks
-      if: "${{ github.event.inputs.skip_notebooks != 'true' }}"
-      run: |
-        export PYTHONPATH=$PYTHONPATH:$(pwd)/PyAutoBuild
-        AUTOBUILD_PATH="$(pwd)/PyAutoBuild/autobuild"
-        pushd "workspace"
-        python3 "$AUTOBUILD_PATH/generate.py" ${{ matrix.project.name }}
     - name: Run jupyter notebooks
       if: "${{ github.event.inputs.skip_notebooks != 'true' }}"
       run: |
@@ -352,7 +428,64 @@ jobs:
         AUTOBUILD_PATH="$(pwd)/PyAutoBuild/autobuild"
 
         pushd workspace
-        python3 "$AUTOBUILD_PATH/run.py" ${{ matrix.project.name }} "notebooks/${{ matrix.project.directory }}"
+        python3 "$AUTOBUILD_PATH/run.py" ${{ matrix.project.name }} "notebooks/${{ matrix.project.directory }}" --report-dir test-results
+    - name: Upload notebook results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: results-notebooks-${{ matrix.project.name }}-${{ matrix.project.directory }}
+        path: workspace/test-results/
+        retention-days: 30
+
+  analyze_results:
+    runs-on: ubuntu-latest
+    needs:
+      - run_scripts
+      - run_notebooks
+      - generate_notebooks
+      - version_number
+    if: always()
+    steps:
+    - uses: actions/checkout@v2
+      with:
+          path: PyAutoBuild
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.12'
+    - name: Download all result artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: all-results
+        pattern: results-*
+        merge-multiple: true
+    - name: Generate release readiness report
+      run: |
+        export PYTHONPATH=$PYTHONPATH:$(pwd)/PyAutoBuild
+        python3 PyAutoBuild/autobuild/aggregate_results.py all-results/ \
+          --output release-report.json \
+          --markdown release-report.md
+    - name: Post workflow summary
+      if: always()
+      run: |
+        cat release-report.md >> $GITHUB_STEP_SUMMARY
+    - name: Upload consolidated report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-report
+        path: |
+          release-report.json
+          release-report.md
+        retention-days: 90
+    - name: Create analysis issue on failure
+      if: always() && (needs.run_scripts.result == 'failure' || needs.run_notebooks.result == 'failure' || needs.generate_notebooks.result == 'failure')
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        python3 PyAutoBuild/autobuild/create_analysis_issue.py release-report.json \
+          --run-id ${{ github.run_id }} \
+          --repo ${{ github.repository }}
 
   release:
     runs-on: ubuntu-latest
@@ -365,6 +498,7 @@ jobs:
       - run_notebooks
       - release_test_pypi
       - version_number
+      - analyze_results
     strategy:
       matrix:
         project:
@@ -454,7 +588,7 @@ jobs:
         python-version: [3.12]
         workspace:
           - repository: Jammy2211/autofit_workspace
-            name: autofit      -
+            name: autofit
           - repository: Jammy2211/autogalaxy_workspace
             name: autogalaxy
           - repository: Jammy2211/autolens_workspace
@@ -501,7 +635,7 @@ jobs:
         git tag -m "Release $VERSION" -a "$VERSION"
         git push
         git push --tags
-        
+
 
   run_notebooks_and_release_workspaces:
     runs-on: ubuntu-latest
