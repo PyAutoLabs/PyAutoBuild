@@ -623,10 +623,13 @@ jobs:
         workspace:
           - repository: Jammy2211/autofit_workspace
             name: autofit
+            package: PyAutoFit
           - repository: Jammy2211/autogalaxy_workspace
             name: autogalaxy
+            package: PyAutoGalaxy
           - repository: Jammy2211/autolens_workspace
             name: autolens
+            package: PyAutoLens
     steps:
     - uses: actions/checkout@v2
       if: "${{ github.event.inputs.skip_release != 'true' }}"
@@ -650,6 +653,14 @@ jobs:
       if: "${{ github.event.inputs.skip_release != 'true' }}"
       run: |
         pip install jupyter ipynb-py-convert PyYAML
+    - name: Update version in README
+      if: "${{ github.event.inputs.skip_release != 'true' }}"
+      run: |
+        VERSION="${{ needs.version_number.outputs.version_number }}"
+        PACKAGE="${{ matrix.workspace.package }}"
+        pushd workspace
+        sed -i "s/$PACKAGE v[0-9]\{4\}\.[0-9]*\.[0-9]*\.[0-9]*/$PACKAGE v$VERSION/g" README.rst README.md 2>/dev/null || true
+        git add README.rst README.md 2>/dev/null || true
     - name: Update jupyter notebooks
       if: "${{ github.event.inputs.skip_release != 'true' }}"
       run: |
@@ -658,7 +669,7 @@ jobs:
         pushd workspace
         python3 "$AUTOBUILD_PATH/generate.py" ${{ matrix.workspace.name }}
         git add *.ipynb
-        git commit -m "Updated notebooks" || true
+        git commit -m "Release ${{ needs.version_number.outputs.version_number }}: update notebooks and version" || true
     - name: Release
       if: "${{ github.event.inputs.skip_release != 'true' }}"
       run: |
