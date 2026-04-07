@@ -323,6 +323,9 @@ jobs:
             export PYAUTOFIT_TEST_MODE=0
         else
             export PYAUTOFIT_TEST_MODE=1
+            export PYAUTO_WORKSPACE_SMALL_DATASETS=1
+            export PYAUTO_DISABLE_CRITICAL_CAUSTICS=1
+            export PYAUTO_FAST_PLOTS=1
         fi
 
         pushd workspace
@@ -421,6 +424,9 @@ jobs:
             export PYAUTOFIT_TEST_MODE=0
         else
             export PYAUTOFIT_TEST_MODE=1
+            export PYAUTO_WORKSPACE_SMALL_DATASETS=1
+            export PYAUTO_DISABLE_CRITICAL_CAUSTICS=1
+            export PYAUTO_FAST_PLOTS=1
         fi
         export JAX_ENABLE_X64=True
 
@@ -769,6 +775,9 @@ jobs:
             export PYAUTOFIT_TEST_MODE=0
           else
             export PYAUTOFIT_TEST_MODE=1
+            export PYAUTO_WORKSPACE_SMALL_DATASETS=1
+            export PYAUTO_DISABLE_CRITICAL_CAUSTICS=1
+            export PYAUTO_FAST_PLOTS=1
           fi
           export PYTHONPATH=$PYTHONPATH:$(pwd)/PyAutoBuild
           AUTOBUILD_PATH="$(pwd)/PyAutoBuild/autobuild"

@@ -17,7 +17,7 @@ The pipeline is triggered via GitHub Actions (`release.yml`) and is manually dis
 Before triggering a build, run:
 
 ```bash
-bash /mnt/c/Users/Jammy/Code/PyAutoJAX/PyAutoBuild/pre_build.sh [minor_version]
+bash /mnt/c/Users/Jammy/Code/PyAutoLabs/PyAutoBuild/pre_build.sh [minor_version]
 # minor_version defaults to 1
 ```
 
@@ -112,6 +112,9 @@ All scripts in `autobuild/` are run from within a checked-out workspace director
 
 - `BUILD_PYTHON_INTERPRETER` — Python interpreter to use for script execution (defaults to `python3`)
 - `PYAUTOFIT_TEST_MODE` — Set to `1` for workspace runs, `0` for `*_test` workspace runs
+- `PYAUTO_WORKSPACE_SMALL_DATASETS` — Set to `1` for workspace runs (caps grids to 15x15), not set for `*_test` runs
+- `PYAUTO_DISABLE_CRITICAL_CAUSTICS` — Set to `1` for workspace runs (skips critical curve overlays), not set for `*_test` runs
+- `PYAUTO_FAST_PLOTS` — Set to `1` for workspace runs (skips `tight_layout()` in subplots), not set for `*_test` runs
 - `JAX_ENABLE_X64` — Set to `True` during CI runs
 
 ### GitHub Actions Workflow
