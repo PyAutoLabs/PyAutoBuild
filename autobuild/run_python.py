@@ -29,10 +29,10 @@ project = args.project
 directory = args.directory
 
 AUTOBUILD_CONFIG = Path(__file__).parent / "config"
-WORKSPACE_CONFIG = Path.cwd() / "config"
+WORKSPACE_BUILD_CONFIG = Path.cwd() / "config" / "build"
 
-# no_run.yaml: prefer workspace config, fall back to autobuild config
-no_run_path = WORKSPACE_CONFIG / "no_run.yaml"
+# no_run.yaml: prefer workspace config/build/, fall back to autobuild config
+no_run_path = WORKSPACE_BUILD_CONFIG / "no_run.yaml"
 if not no_run_path.exists():
     no_run_path = AUTOBUILD_CONFIG / "no_run.yaml"
 
@@ -45,12 +45,12 @@ if isinstance(no_run_data, dict):
 else:
     no_run_list = no_run_data or []
 
-# env_vars.yaml: explicit flag > workspace config > none
+# env_vars.yaml: explicit flag > workspace config/build/ > none
 env_config_path = None
 if args.env_config:
     env_config_path = Path(args.env_config)
-elif (WORKSPACE_CONFIG / "env_vars.yaml").exists():
-    env_config_path = WORKSPACE_CONFIG / "env_vars.yaml"
+elif (WORKSPACE_BUILD_CONFIG / "env_vars.yaml").exists():
+    env_config_path = WORKSPACE_BUILD_CONFIG / "env_vars.yaml"
 
 if __name__ == "__main__":
     report = None
