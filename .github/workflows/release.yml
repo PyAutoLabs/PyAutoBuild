@@ -309,6 +309,7 @@ jobs:
     - name: Install project
       if: "${{ github.event.inputs.skip_scripts != 'true' }}"
       run: |
+        python3 -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple "autoconf==${{ needs.version_number.outputs.version_number }}"
         python3 -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple "${{ steps.configure.outputs.project }}==${{ needs.version_number.outputs.version_number }}"
     - name: Run Python scripts
       if: "${{ github.event.inputs.skip_scripts != 'true' }}"
@@ -400,6 +401,7 @@ jobs:
     - name: Install project
       if: "${{ github.event.inputs.skip_notebooks != 'true' }}"
       run: |
+        python3 -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple "autoconf==${{ needs.version_number.outputs.version_number }}"
         python3 -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple "${{ steps.configure.outputs.project }}==${{ needs.version_number.outputs.version_number }}"
     - name: Install Jupyter dependency
       if: "${{ github.event.inputs.skip_notebooks != 'true' }}"
