@@ -315,18 +315,7 @@ jobs:
       run: |
         export PYTHONPATH=$PYTHONPATH:$(pwd)/PyAutoBuild
         export PATH=$PATH:$(pwd)/PyAutoBuild/autobuild
-        export JAX_ENABLE_X64=True
         AUTOBUILD_PATH="$(pwd)/PyAutoBuild/autobuild"
-
-        if [[ ${{ matrix.project.name }} == *_test ]]
-        then
-            export PYAUTOFIT_TEST_MODE=0
-        else
-            export PYAUTOFIT_TEST_MODE=1
-            export PYAUTO_WORKSPACE_SMALL_DATASETS=1
-            export PYAUTO_DISABLE_CRITICAL_CAUSTICS=1
-            export PYAUTO_FAST_PLOTS=1
-        fi
 
         pushd workspace
         python3 "$AUTOBUILD_PATH/run_python.py" ${{ matrix.project.name }} "scripts/${{ matrix.project.directory }}" --report-dir test-results
@@ -419,17 +408,6 @@ jobs:
     - name: Run jupyter notebooks
       if: "${{ github.event.inputs.skip_notebooks != 'true' }}"
       run: |
-        if [[ ${{ matrix.project.name }} == *_test ]]
-        then
-            export PYAUTOFIT_TEST_MODE=0
-        else
-            export PYAUTOFIT_TEST_MODE=1
-            export PYAUTO_WORKSPACE_SMALL_DATASETS=1
-            export PYAUTO_DISABLE_CRITICAL_CAUSTICS=1
-            export PYAUTO_FAST_PLOTS=1
-        fi
-        export JAX_ENABLE_X64=True
-
         export PYTHONPATH=$PYTHONPATH:$(pwd)/PyAutoBuild
         AUTOBUILD_PATH="$(pwd)/PyAutoBuild/autobuild"
 
