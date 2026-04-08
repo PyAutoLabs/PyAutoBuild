@@ -11,7 +11,7 @@ set -e
 
 MINOR_VERSION="${1:-1}"
 SKIP_RELEASE="${2:-false}"
-PYAUTOBASE="/mnt/c/Users/Jammy/Code/PyAutoJAX"
+PYAUTOBASE="/mnt/c/Users/Jammy/Code/PyAutoLabs"
 AUTOBUILD="$PYAUTOBASE/PyAutoBuild/autobuild"
 PYTHONPATH_EXTRA="$AUTOBUILD"
 

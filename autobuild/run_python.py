@@ -16,16 +16,41 @@ parser.add_argument(
     default=None,
     help="Directory to write structured JSON results to",
 )
+parser.add_argument(
+    "--env-config",
+    type=str,
+    default=None,
+    help="Path to env_vars.yaml for per-script environment configuration",
+)
 
 args = parser.parse_args()
 
 project = args.project
 directory = args.directory
 
-CONFIG_PATH = Path(__file__).parent / "config"
+AUTOBUILD_CONFIG = Path(__file__).parent / "config"
+WORKSPACE_CONFIG = Path.cwd() / "config"
 
-with open(CONFIG_PATH / "no_run.yaml") as f:
-    no_run_dict = yaml.safe_load(f)
+# no_run.yaml: prefer workspace config, fall back to autobuild config
+no_run_path = WORKSPACE_CONFIG / "no_run.yaml"
+if not no_run_path.exists():
+    no_run_path = AUTOBUILD_CONFIG / "no_run.yaml"
+
+with open(no_run_path) as f:
+    no_run_data = yaml.safe_load(f)
+
+# Support both flat list (workspace) and keyed dict (legacy autobuild)
+if isinstance(no_run_data, dict):
+    no_run_list = no_run_data[project]
+else:
+    no_run_list = no_run_data or []
+
+# env_vars.yaml: explicit flag > workspace config > none
+env_config_path = None
+if args.env_config:
+    env_config_path = Path(args.env_config)
+elif (WORKSPACE_CONFIG / "env_vars.yaml").exists():
+    env_config_path = WORKSPACE_CONFIG / "env_vars.yaml"
 
 if __name__ == "__main__":
     report = None
@@ -39,13 +64,19 @@ if __name__ == "__main__":
             directory=directory,
             run_type="script",
         )
-        skip_reasons = parse_no_run_reasons(CONFIG_PATH / "no_run.yaml", project)
+        skip_reasons = parse_no_run_reasons(no_run_path, project)
+
+    env_config = None
+    if env_config_path:
+        from env_config import load_env_config
+        env_config = load_env_config(env_config_path)
 
     build_util.execute_scripts_in_folder(
-        no_run_list=no_run_dict[project],
+        no_run_list=no_run_list,
         directory=directory,
         report=report,
         skip_reasons=skip_reasons,
+        env_config=env_config,
     )
 
     if report is not None:

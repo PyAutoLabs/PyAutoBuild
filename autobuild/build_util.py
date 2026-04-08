@@ -13,7 +13,6 @@ TIMEOUT_SECS = 36000
 BUILD_PATH = Path(__file__).parent
 
 BUILD_PYTHON_INTERPRETER = os.environ.get("BUILD_PYTHON_INTERPRETER", "python3")
-print(BUILD_PYTHON_INTERPRETER)
 
 
 def py_to_notebook(filename: Path):
@@ -84,7 +83,7 @@ def _find_skip_reason(file: Path, no_run_list: List[str], skip_reasons: dict) ->
     return "No reason documented"
 
 
-def execute_notebook(f, report=None):
+def execute_notebook(f, report=None, env=None):
     print(f"Running <{f}> at {datetime.datetime.now().isoformat()}")
 
     start = time.time()
@@ -96,6 +95,7 @@ def execute_notebook(f, report=None):
                 timeout=TIMEOUT_SECS,
                 capture_output=True,
                 text=True,
+                env=env,
             )
             print(result.stdout)
             if result.stderr:
@@ -105,12 +105,13 @@ def execute_notebook(f, report=None):
                 ["jupyter", "nbconvert", "--to", "notebook", "--execute", "--output", f, f],
                 check=True,
                 timeout=TIMEOUT_SECS,
+                env=env,
             )
     except subprocess.TimeoutExpired as e:
-        logging.exception(e)
         duration = time.time() - start
         if report is not None:
             from result_collector import ScriptResult, Status
+            print(f"  TIMEOUT ({duration:.0f}s)")
             report.results.append(ScriptResult(
                 file=str(f),
                 status=Status.TIMEOUT,
@@ -118,14 +119,15 @@ def execute_notebook(f, report=None):
                 error_message="Timed out after {:.0f}s".format(duration),
             ))
             return
+        logging.exception(e)
         sys.exit(1)
     except subprocess.CalledProcessError as e:
-        logging.exception(e)
         duration = time.time() - start
 
         if "InversionException" in traceback.format_exc():
             if report is not None:
                 from result_collector import ScriptResult, Status
+                print(f"  PASS (InversionException, {duration:.1f}s)")
                 report.results.append(ScriptResult(
                     file=str(f),
                     status=Status.PASSED,
@@ -137,6 +139,8 @@ def execute_notebook(f, report=None):
         if report is not None:
             from result_collector import ScriptResult, Status
             stderr = getattr(e, 'stderr', '') or ''
+            last_line = stderr.strip().splitlines()[-1] if stderr.strip() else str(e)
+            print(f"  FAIL ({duration:.1f}s) {last_line}")
             report.results.append(ScriptResult(
                 file=str(f),
                 status=Status.FAILED,
@@ -145,11 +149,13 @@ def execute_notebook(f, report=None):
                 traceback=stderr,
             ))
             return
+        logging.exception(e)
         sys.exit(1)
 
     duration = time.time() - start
     if report is not None:
         from result_collector import ScriptResult, Status
+        print(f"  PASS ({duration:.1f}s)")
         report.results.append(ScriptResult(
             file=str(f),
             status=Status.PASSED,
@@ -163,6 +169,7 @@ def execute_notebooks_in_folder(
     visualise_dict=None,
     report=None,
     skip_reasons=None,
+    env_config=None,
 ):
     # Infrastructure files — always skip, never report
     infra_skip = ["__init__", "README"]
@@ -193,12 +200,15 @@ def execute_notebooks_in_folder(
                     skip_reason=reason,
                 ))
         else:
-            execute_notebook(file, report=report)
+            from env_config import build_env_for_script
+            env = build_env_for_script(file, env_config)
+            execute_notebook(file, report=report, env=env)
 
 
-def execute_script(f, report=None):
+def execute_script(f, report=None, env=None):
     args = [BUILD_PYTHON_INTERPRETER, f]
-    print(f"Running <{args}>")
+    script_name = Path(f).relative_to(Path.cwd()) if Path(f).is_relative_to(Path.cwd()) else Path(f).name
+    print(f"  {script_name} ...", end=" ", flush=True)
 
     start = time.time()
     try:
@@ -209,6 +219,7 @@ def execute_script(f, report=None):
                 timeout=TIMEOUT_SECS,
                 capture_output=True,
                 text=True,
+                env=env,
             )
             print(result.stdout)
             if result.stderr:
@@ -218,12 +229,13 @@ def execute_script(f, report=None):
                 args,
                 check=True,
                 timeout=TIMEOUT_SECS,
+                env=env,
             )
     except subprocess.TimeoutExpired as e:
-        logging.exception(e)
         duration = time.time() - start
         if report is not None:
             from result_collector import ScriptResult, Status
+            print(f"  TIMEOUT ({duration:.0f}s)")
             report.results.append(ScriptResult(
                 file=str(f),
                 status=Status.TIMEOUT,
@@ -231,14 +243,15 @@ def execute_script(f, report=None):
                 error_message="Timed out after {:.0f}s".format(duration),
             ))
             return
+        logging.exception(e)
         sys.exit(1)
     except subprocess.CalledProcessError as e:
-        logging.exception(e)
         duration = time.time() - start
 
         if "inversion" in f:
             if report is not None:
                 from result_collector import ScriptResult, Status
+                print(f"  PASS (inversion, {duration:.1f}s)")
                 report.results.append(ScriptResult(
                     file=str(f),
                     status=Status.PASSED,
@@ -250,6 +263,9 @@ def execute_script(f, report=None):
         if report is not None:
             from result_collector import ScriptResult, Status
             stderr = getattr(e, 'stderr', '') or ''
+            # One-line console summary; full details go to the report file
+            last_line = stderr.strip().splitlines()[-1] if stderr.strip() else str(e)
+            print(f"  FAIL ({duration:.1f}s) {last_line}")
             report.results.append(ScriptResult(
                 file=str(f),
                 status=Status.FAILED,
@@ -258,11 +274,13 @@ def execute_script(f, report=None):
                 traceback=stderr,
             ))
             return
+        logging.exception(e)
         sys.exit(1)
 
     duration = time.time() - start
     if report is not None:
         from result_collector import ScriptResult, Status
+        print(f"  PASS ({duration:.1f}s)")
         report.results.append(ScriptResult(
             file=str(f),
             status=Status.PASSED,
@@ -298,7 +316,7 @@ def find_scripts_in_folder(directory: str) -> List[Path]:
     )
 
 
-def execute_scripts_in_folder(directory, no_run_list=None, report=None, skip_reasons=None):
+def execute_scripts_in_folder(directory, no_run_list=None, report=None, skip_reasons=None, env_config=None):
     no_run_list = no_run_list or []
     # Infrastructure files — always skip, never report
     infra_skip = ["__init__", "README"]
@@ -320,4 +338,6 @@ def execute_scripts_in_folder(directory, no_run_list=None, report=None, skip_rea
                     skip_reason=reason,
                 ))
         else:
-            execute_script(str(file), report=report)
+            from env_config import build_env_for_script
+            env = build_env_for_script(file, env_config)
+            execute_script(str(file), report=report, env=env)

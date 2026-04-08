@@ -1,0 +1,30 @@
+# Per-script environment variable configuration.
+#
+# "defaults" are applied to every script on top of the inherited environment.
+# "overrides" selectively unset or replace vars for matching path patterns.
+#
+# Pattern convention (same as no_run.yaml):
+#   - Patterns containing '/' do a substring match against the file path
+#   - Patterns without '/' match the file stem exactly
+
+defaults:
+  PYAUTOFIT_TEST_MODE: "2"
+  PYAUTO_WORKSPACE_SMALL_DATASETS: "1"
+  PYAUTO_DISABLE_CRITICAL_CAUSTICS: "1"
+  PYAUTO_DISABLE_JAX: "1"
+  PYAUTO_FAST_PLOTS: "1"
+  JAX_ENABLE_X64: "True"
+  NUMBA_CACHE_DIR: "/tmp/numba_cache"
+  MPLCONFIGDIR: "/tmp/matplotlib"
+
+overrides:
+  # start_here scripts load real FITS data that breaks with small datasets
+  - pattern: "imaging/start_here"
+    unset: [PYAUTO_WORKSPACE_SMALL_DATASETS]
+  - pattern: "interferometer/start_here"
+    unset: [PYAUTO_WORKSPACE_SMALL_DATASETS]
+  - pattern: "group/start_here"
+    unset: [PYAUTO_WORKSPACE_SMALL_DATASETS]
+  # JAX likelihood functions need full-size datasets for accuracy testing
+  - pattern: "jax_likelihood_functions/"
+    unset: [PYAUTO_WORKSPACE_SMALL_DATASETS]

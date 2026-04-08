@@ -74,15 +74,81 @@ class RunReport:
             "results": [r.to_dict() for r in self.results],
         }
 
+    def to_markdown(self) -> str:
+        lines = [
+            f"# Test Report: {self.project} / {self.directory} ({self.run_type})",
+            "",
+        ]
+
+        s = self.summary
+        total = sum(s.values())
+        lines.append(f"**{total} scripts** | "
+                      + " | ".join(f"{v} {k}" for k, v in sorted(s.items())))
+        lines.append("")
+
+        lines.append("| Status | Count |")
+        lines.append("|--------|-------|")
+        for status, count in sorted(s.items()):
+            lines.append(f"| {status} | {count} |")
+        lines.append("")
+
+        failures = [r for r in self.results
+                     if r.status in (Status.FAILED, Status.TIMEOUT)]
+        if failures:
+            lines.append("## Failures")
+            lines.append("")
+            for r in failures:
+                duration = f"{r.duration_seconds:.1f}s" if r.duration_seconds else ""
+                lines.append(f"### `{r.file}` — {r.status.value.upper()} ({duration})")
+                lines.append("")
+                if r.error_message:
+                    lines.append(f"{r.error_message}")
+                    lines.append("")
+                if r.traceback:
+                    tb_lines = r.traceback.strip().splitlines()[-20:]
+                    lines.append("```")
+                    lines.extend(tb_lines)
+                    lines.append("```")
+                    lines.append("")
+
+        skipped = [r for r in self.results if r.status == Status.SKIPPED]
+        if skipped:
+            lines.append("## Skipped")
+            lines.append("")
+            lines.append("| Script | Reason |")
+            lines.append("|--------|--------|")
+            for r in skipped:
+                name = Path(r.file).name
+                reason = r.skip_reason or "No reason documented"
+                lines.append(f"| `{name}` | {reason} |")
+            lines.append("")
+
+        passed = [r for r in self.results if r.status == Status.PASSED]
+        if passed:
+            lines.append("## Passed")
+            lines.append("")
+            for r in passed:
+                duration = f"{r.duration_seconds:.1f}s" if r.duration_seconds else ""
+                lines.append(f"- `{r.file}` ({duration})")
+            lines.append("")
+
+        return "\n".join(lines)
+
     def write(self, output_dir: Path):
         self.completed_at = datetime.datetime.now().isoformat()
         output_dir.mkdir(parents=True, exist_ok=True)
         safe_dir = self.directory.replace("/", "__")
-        filename = f"{self.project}__{safe_dir}__{self.run_type}.json"
-        path = output_dir / filename
-        with open(path, "w") as f:
+        base = f"{self.project}__{safe_dir}__{self.run_type}"
+
+        json_path = output_dir / f"{base}.json"
+        with open(json_path, "w") as f:
             json.dump(self.to_dict(), f, indent=2)
-        return path
+
+        md_path = output_dir / f"{base}.md"
+        with open(md_path, "w") as f:
+            f.write(self.to_markdown())
+
+        return json_path
 
 
 def parse_no_run_reasons(yaml_path: Path, project: str) -> dict:
@@ -91,8 +157,13 @@ def parse_no_run_reasons(yaml_path: Path, project: str) -> dict:
 
     Since PyYAML strips comments, we parse the raw file line-by-line
     to capture the inline # reason comments.
+
+    Supports both formats:
+    - Flat list (workspace): every ``- entry`` line is relevant
+    - Keyed dict (legacy autobuild): only entries under the matching project key
     """
     reasons = {}
+    has_project_keys = False
     in_project = False
     with open(yaml_path) as f:
         for line in f:
@@ -100,9 +171,12 @@ def parse_no_run_reasons(yaml_path: Path, project: str) -> dict:
             if not stripped or stripped.startswith("#"):
                 continue
             if stripped.endswith(":") and not stripped.startswith("-"):
+                has_project_keys = True
                 in_project = stripped.rstrip(":").strip() == project
                 continue
-            if in_project and stripped.startswith("- "):
+            if stripped.startswith("- "):
+                if has_project_keys and not in_project:
+                    continue
                 entry = stripped[2:]
                 if "#" in entry:
                     pattern, reason = entry.split("#", 1)
