@@ -35,11 +35,11 @@ def uncomment_jupyter_magic(f):
         lines = sources.readlines()
     with open(f, "w") as sources:
         for line in lines:
-            line = re.sub(r"# %matplotlib", "%matplotlib", line)
-            line = re.sub(r"# from pyproj", "from pyproj", line)
-            line = re.sub(r"# workspace_path", "workspace_path", line)
-            line = re.sub(r"# %cd", "%cd", line)
-            line = re.sub(r"# print\(f", "print(f", line)
+            line = re.sub(
+                r"# from autoconf import setup_notebook; setup_notebook\(\)",
+                "from autoconf import setup_notebook; setup_notebook()",
+                line,
+            )
             sources.write(line)
 
 
