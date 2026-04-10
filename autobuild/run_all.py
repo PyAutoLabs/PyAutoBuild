@@ -100,6 +100,16 @@ def main():
     print(f"Results directory: {results_dir}")
     print(f"Workspaces: {', '.join(workspaces)}")
 
+    from slow_skip_check import find_slow_skips, format_warning_banner, format_report_section
+    ws_dirs_for_scan = [
+        PYAUTOBASE / WORKSPACES[k][0]
+        for k in workspaces
+        if (PYAUTOBASE / WORKSPACES[k][0]).exists()
+    ]
+    slow_skips = find_slow_skips(ws_dirs_for_scan)
+    if slow_skips:
+        print(format_warning_banner(slow_skips))
+
     for ws_key in workspaces:
         ws_name, project = WORKSPACES[ws_key]
         ws_dir = PYAUTOBASE / ws_name
@@ -126,6 +136,7 @@ def main():
     from aggregate_results import aggregate, generate_markdown
 
     report = aggregate(results_dir)
+    report["slow_skips"] = [s.to_dict() for s in slow_skips]
 
     import json
     with open(results_dir / "report.json", "w") as f:
@@ -155,6 +166,9 @@ def main():
         print(f"\n{len(failures)} failure(s) — see {md_path}")
     else:
         print(f"\nAll tests passed! Full report: {md_path}")
+
+    if slow_skips:
+        print(format_warning_banner(slow_skips))
 
     sys.exit(1 if failures else 0)
 
