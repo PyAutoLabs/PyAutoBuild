@@ -100,15 +100,23 @@ def main():
     print(f"Results directory: {results_dir}")
     print(f"Workspaces: {', '.join(workspaces)}")
 
-    from slow_skip_check import find_slow_skips, format_warning_banner, format_report_section
+    from slow_skip_check import (
+        find_slow_skips,
+        find_needs_fix_skips,
+        format_warning_banner,
+        format_report_section,
+    )
     ws_dirs_for_scan = [
         PYAUTOBASE / WORKSPACES[k][0]
         for k in workspaces
         if (PYAUTOBASE / WORKSPACES[k][0]).exists()
     ]
     slow_skips = find_slow_skips(ws_dirs_for_scan)
+    needs_fix_skips = find_needs_fix_skips(ws_dirs_for_scan)
     if slow_skips:
-        print(format_warning_banner(slow_skips))
+        print(format_warning_banner(slow_skips, category="slow"))
+    if needs_fix_skips:
+        print(format_warning_banner(needs_fix_skips, category="needs_fix"))
 
     for ws_key in workspaces:
         ws_name, project = WORKSPACES[ws_key]
@@ -137,6 +145,7 @@ def main():
 
     report = aggregate(results_dir)
     report["slow_skips"] = [s.to_dict() for s in slow_skips]
+    report["needs_fix_skips"] = [s.to_dict() for s in needs_fix_skips]
 
     import json
     with open(results_dir / "report.json", "w") as f:
@@ -168,7 +177,9 @@ def main():
         print(f"\nAll tests passed! Full report: {md_path}")
 
     if slow_skips:
-        print(format_warning_banner(slow_skips))
+        print(format_warning_banner(slow_skips, category="slow"))
+    if needs_fix_skips:
+        print(format_warning_banner(needs_fix_skips, category="needs_fix"))
 
     sys.exit(1 if failures else 0)
 
