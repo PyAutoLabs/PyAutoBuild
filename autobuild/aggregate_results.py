@@ -185,6 +185,31 @@ def generate_markdown(report: dict) -> str:
     lines.append(f"**Status: {status}**")
     lines.append("")
 
+    # Slow-skipped scripts — surface at the top so they can't be missed
+    slow_skips = report.get("slow_skips") or []
+    if slow_skips:
+        lines.append("## Slow-Skipped Scripts (needs performance fix)")
+        lines.append("")
+        lines.append(
+            f"**{len(slow_skips)} script(s)** are being skipped because they exceed "
+            "the 60s per-script timeout cap. These are NOT permanent skips — they "
+            "need the underlying performance issue fixed and the `SLOW` marker "
+            "removed from the workspace's `config/build/no_run.yaml`."
+        )
+        lines.append("")
+        lines.append("| Workspace | Script | Marked | Age | Reason |")
+        lines.append("|-----------|--------|--------|-----|--------|")
+        for s in sorted(slow_skips, key=lambda x: (x["workspace"], x["pattern"])):
+            date_str = s.get("marked_date") or "unknown"
+            age = s.get("age_days")
+            age_str = f"{age}d" if age is not None else "—"
+            if s.get("is_stale"):
+                age_str += " **STALE**"
+            lines.append(
+                f"| {s['workspace']} | `{s['pattern']}` | {date_str} | {age_str} | {s['reason']} |"
+            )
+        lines.append("")
+
     # Summary
     s = report.get("summary", {})
     lines.append("## Summary")
