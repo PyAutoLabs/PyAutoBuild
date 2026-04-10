@@ -185,21 +185,18 @@ def generate_markdown(report: dict) -> str:
     lines.append(f"**Status: {status}**")
     lines.append("")
 
-    # Slow-skipped scripts — surface at the top so they can't be missed
-    slow_skips = report.get("slow_skips") or []
-    if slow_skips:
-        lines.append("## Slow-Skipped Scripts (needs performance fix)")
+    # Slow-skipped and needs-fix scripts — surface at the top so they
+    # can't be missed
+    def _render_tagged_section(title: str, intro: str, entries: list) -> None:
+        if not entries:
+            return
+        lines.append(title)
         lines.append("")
-        lines.append(
-            f"**{len(slow_skips)} script(s)** are being skipped because they exceed "
-            "the 60s per-script timeout cap. These are NOT permanent skips — they "
-            "need the underlying performance issue fixed and the `SLOW` marker "
-            "removed from the workspace's `config/build/no_run.yaml`."
-        )
+        lines.append(intro.format(n=len(entries)))
         lines.append("")
         lines.append("| Workspace | Script | Marked | Age | Reason |")
         lines.append("|-----------|--------|--------|-----|--------|")
-        for s in sorted(slow_skips, key=lambda x: (x["workspace"], x["pattern"])):
+        for s in sorted(entries, key=lambda x: (x["workspace"], x["pattern"])):
             date_str = s.get("marked_date") or "unknown"
             age = s.get("age_days")
             age_str = f"{age}d" if age is not None else "—"
@@ -209,6 +206,27 @@ def generate_markdown(report: dict) -> str:
                 f"| {s['workspace']} | `{s['pattern']}` | {date_str} | {age_str} | {s['reason']} |"
             )
         lines.append("")
+
+    _render_tagged_section(
+        title="## Slow-Skipped Scripts (needs performance fix)",
+        intro=(
+            "**{n} script(s)** are being skipped because they exceed the 60s "
+            "per-script timeout cap. These are NOT permanent skips — they need "
+            "the underlying performance issue fixed and the `SLOW` marker "
+            "removed from the workspace's `config/build/no_run.yaml`."
+        ),
+        entries=report.get("slow_skips") or [],
+    )
+    _render_tagged_section(
+        title="## Needs-Fix Scripts (parked for investigation)",
+        intro=(
+            "**{n} script(s)** are being skipped because they are broken and "
+            "parked as a to-do list. These are NOT permanent skips — investigate "
+            "the failure, fix the underlying bug, and remove the `NEEDS_FIX` "
+            "marker from the workspace's `config/build/no_run.yaml`."
+        ),
+        entries=report.get("needs_fix_skips") or [],
+    )
 
     # Summary
     s = report.get("summary", {})
