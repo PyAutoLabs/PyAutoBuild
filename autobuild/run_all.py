@@ -58,6 +58,7 @@ def run_workspace(name, workspace_dir, project, results_dir, python):
     import os
     env = os.environ.copy()
     env["BUILD_PYTHON_INTERPRETER"] = python
+    env["PYTHONUNBUFFERED"] = "1"
 
     for directory in directories:
         print(f"\n  Running {name} / scripts/{directory} ...")

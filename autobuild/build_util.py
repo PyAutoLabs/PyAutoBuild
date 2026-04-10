@@ -9,7 +9,7 @@ import traceback
 from pathlib import Path
 from typing import List
 
-TIMEOUT_SECS = 36000
+TIMEOUT_SECS = 60
 BUILD_PATH = Path(__file__).parent
 
 BUILD_PYTHON_INTERPRETER = os.environ.get("BUILD_PYTHON_INTERPRETER", "python3")
@@ -97,9 +97,6 @@ def execute_notebook(f, report=None, env=None):
                 text=True,
                 env=env,
             )
-            print(result.stdout)
-            if result.stderr:
-                print(result.stderr, file=sys.stderr)
         else:
             subprocess.run(
                 ["jupyter", "nbconvert", "--to", "notebook", "--execute", "--output", f, f],
@@ -221,9 +218,6 @@ def execute_script(f, report=None, env=None):
                 text=True,
                 env=env,
             )
-            print(result.stdout)
-            if result.stderr:
-                print(result.stderr, file=sys.stderr)
         else:
             subprocess.run(
                 args,
