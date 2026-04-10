@@ -43,7 +43,7 @@ REPO_NAMES = {
 
 # Base branches per repo
 BASE_BRANCHES = {
-    "rhayes777/PyAutoFit": "main_build",
+    "rhayes777/PyAutoFit": "main",
     "Jammy2211/PyAutoArray": "main",
     "Jammy2211/PyAutoGalaxy": "main",
     "Jammy2211/PyAutoLens": "main",
