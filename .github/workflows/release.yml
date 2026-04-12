@@ -100,29 +100,29 @@ jobs:
             pushd "${{ matrix.project.path }}"
             python3 -m twine upload --repository-url https://test.pypi.org/legacy/ --verbose dist/*
             popd
-        - name: Wait for packages to appear on test PyPI
-          shell: bash {0}   # So that we do not exit if a command gives a bad exit code
+        - name: Wait for packages and install
           run: |
             export PACKAGES=("autoconf" "autoarray" "autofit" "autogalaxy" "autolens")
             export VERSION="${{ needs.version_number.outputs.version_number }}"
+
             # Wait for each package to become available on test PyPI
             for PACKAGE in ${PACKAGES[@]}; do
-              python3 -m pip download --no-deps --dest /tmp/pyauto-check --index-url https://test.pypi.org/simple/ $PACKAGE==$VERSION
-              test_condition=$?
+              echo "Checking for $PACKAGE==$VERSION on test PyPI..."
               cnt=0
-              while [[ $test_condition != "0" ]]; do
-                echo "Waiting for $PACKAGE==$VERSION on test PyPI... (attempt $cnt)"
-                sleep 10
+              until python3 -m pip download --no-deps --dest /tmp/pyauto-check \
+                    --index-url https://test.pypi.org/simple/ "$PACKAGE==$VERSION" 2>/dev/null; do
                 ((cnt=cnt+1))
-                [[ $cnt == "100" ]] && echo "Timed out, tried 100 times" && break
-                python3 -m pip download --no-deps --dest /tmp/pyauto-check --index-url https://test.pypi.org/simple/ $PACKAGE==$VERSION
-                test_condition=$?
+                if [[ $cnt -ge 100 ]]; then
+                  echo "ERROR: Timed out waiting for $PACKAGE==$VERSION after 100 attempts"
+                  exit 1
+                fi
+                echo "  Waiting for $PACKAGE==$VERSION... (attempt $cnt)"
+                sleep 10
               done
+              echo "  Found $PACKAGE==$VERSION"
             done
-            true  # ensure step exits 0
-        - name: Install all PyAuto packages
-          run: |
-            export VERSION="${{ needs.version_number.outputs.version_number }}"
+
+            echo "All packages available. Installing with pinned versions..."
             # Install all 5 PyAuto packages in a single command with all versions
             # pinned. This prevents pip from substituting unrelated packages with
             # the same names from production PyPI (e.g. autoconf 0.7.7, autofit 0.73.1)
