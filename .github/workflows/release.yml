@@ -100,31 +100,41 @@ jobs:
             pushd "${{ matrix.project.path }}"
             python3 -m twine upload --repository-url https://test.pypi.org/legacy/ --verbose dist/*
             popd
-        - name: Wait for packages to upload to Pypi
+        - name: Wait for packages to appear on test PyPI
           shell: bash {0}   # So that we do not exit if a command gives a bad exit code
           run: |
             export PACKAGES=("autoconf" "autoarray" "autofit" "autogalaxy" "autolens")
             export VERSION="${{ needs.version_number.outputs.version_number }}"
+            # Wait for each package to become available on test PyPI
             for PACKAGE in ${PACKAGES[@]}; do
-              python3 -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple $PACKAGE[optional]==$VERSION
+              python3 -m pip download --no-deps --dest /tmp/pyauto-check --index-url https://test.pypi.org/simple/ $PACKAGE==$VERSION
               test_condition=$?
               cnt=0
               while [[ $test_condition != "0" ]]; do
-                echo "Failed to find package, retrying in 10 seconds.."
+                echo "Waiting for $PACKAGE==$VERSION on test PyPI... (attempt $cnt)"
                 sleep 10
                 ((cnt=cnt+1))
                 [[ $cnt == "100" ]] && echo "Timed out, tried 100 times" && break
-                python3 -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple $PACKAGE[optional]==$VERSION
+                python3 -m pip download --no-deps --dest /tmp/pyauto-check --index-url https://test.pypi.org/simple/ $PACKAGE==$VERSION
                 test_condition=$?
               done
             done
-            # Re-pin PyAuto packages from test PyPI to prevent production PyPI
-            # versions being pulled in during dependency resolution.
-            # Use || true because not all packages may be uploaded yet (parallel matrix).
-            for PACKAGE in ${PACKAGES[@]}; do
-              python3 -m pip install --index-url https://test.pypi.org/simple/ --no-deps --force-reinstall $PACKAGE==$VERSION || true
-            done
             true  # ensure step exits 0
+        - name: Install all PyAuto packages
+          run: |
+            export VERSION="${{ needs.version_number.outputs.version_number }}"
+            # Install all 5 PyAuto packages in a single command with all versions
+            # pinned. This prevents pip from substituting unrelated packages with
+            # the same names from production PyPI (e.g. autoconf 0.7.7, autofit 0.73.1)
+            # during dependency resolution.
+            python3 -m pip install \
+              --index-url https://test.pypi.org/simple/ \
+              --extra-index-url https://pypi.org/simple \
+              "autoconf[optional]==$VERSION" \
+              "autoarray[optional]==$VERSION" \
+              "autofit[optional]==$VERSION" \
+              "autogalaxy[optional]==$VERSION" \
+              "autolens[optional]==$VERSION"
         - name: Tests
           run: |
             pushd "${{ matrix.project.path }}"
@@ -133,15 +143,6 @@ jobs:
             pip install pynufft==2025.1.1
             pip install pytest
             pip install numba
-            # Re-pin PyAuto packages after third-party installs to ensure
-            # test PyPI versions were not replaced by production PyPI versions.
-            # Only re-pin packages that are already installed (pip show succeeds).
-            export VERSION="${{ needs.version_number.outputs.version_number }}"
-            for PACKAGE in autoconf autoarray autofit autogalaxy autolens; do
-              if pip show $PACKAGE >/dev/null 2>&1; then
-                python3 -m pip install --index-url https://test.pypi.org/simple/ --no-deps --force-reinstall $PACKAGE==$VERSION || true
-              fi
-            done
             python3 -m pytest
 
   find_scripts:
@@ -325,11 +326,11 @@ jobs:
     - name: Install project
       if: "${{ github.event.inputs.skip_scripts != 'true' }}"
       run: |
-        python3 -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple "autoconf==${{ needs.version_number.outputs.version_number }}"
-        python3 -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple "${{ steps.configure.outputs.project }}==${{ needs.version_number.outputs.version_number }}"
-        # Re-pin PyAuto packages from test PyPI to prevent production PyPI substitution
-        python3 -m pip install --index-url https://test.pypi.org/simple/ --no-deps --force-reinstall "autoconf==${{ needs.version_number.outputs.version_number }}"
-        python3 -m pip install --index-url https://test.pypi.org/simple/ --no-deps --force-reinstall "${{ steps.configure.outputs.project }}==${{ needs.version_number.outputs.version_number }}"
+        python3 -m pip install \
+          --index-url https://test.pypi.org/simple/ \
+          --extra-index-url https://pypi.org/simple \
+          "autoconf==${{ needs.version_number.outputs.version_number }}" \
+          "${{ steps.configure.outputs.project }}==${{ needs.version_number.outputs.version_number }}"
     - name: Run Python scripts
       if: "${{ github.event.inputs.skip_scripts != 'true' }}"
       run: |
@@ -420,11 +421,11 @@ jobs:
     - name: Install project
       if: "${{ github.event.inputs.skip_notebooks != 'true' }}"
       run: |
-        python3 -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple "autoconf==${{ needs.version_number.outputs.version_number }}"
-        python3 -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple "${{ steps.configure.outputs.project }}==${{ needs.version_number.outputs.version_number }}"
-        # Re-pin PyAuto packages from test PyPI to prevent production PyPI substitution
-        python3 -m pip install --index-url https://test.pypi.org/simple/ --no-deps --force-reinstall "autoconf==${{ needs.version_number.outputs.version_number }}"
-        python3 -m pip install --index-url https://test.pypi.org/simple/ --no-deps --force-reinstall "${{ steps.configure.outputs.project }}==${{ needs.version_number.outputs.version_number }}"
+        python3 -m pip install \
+          --index-url https://test.pypi.org/simple/ \
+          --extra-index-url https://pypi.org/simple \
+          "autoconf==${{ needs.version_number.outputs.version_number }}" \
+          "${{ steps.configure.outputs.project }}==${{ needs.version_number.outputs.version_number }}"
     - name: Install Jupyter dependency
       if: "${{ github.event.inputs.skip_notebooks != 'true' }}"
       run: |
@@ -757,9 +758,10 @@ jobs:
       - name: Install project
         if: "${{ github.event.inputs.update_notebook_visualisations == 'true' }}"
         run: |
-          python3 -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple "${{ steps.configure.outputs.project }}==${{ needs.version_number.outputs.version_number }}"
-          # Re-pin from test PyPI to prevent production PyPI substitution
-          python3 -m pip install --index-url https://test.pypi.org/simple/ --no-deps --force-reinstall "${{ steps.configure.outputs.project }}==${{ needs.version_number.outputs.version_number }}"
+          python3 -m pip install \
+            --index-url https://test.pypi.org/simple/ \
+            --extra-index-url https://pypi.org/simple \
+            "${{ steps.configure.outputs.project }}==${{ needs.version_number.outputs.version_number }}"
       - name: Install Jupyter dependency
         if: "${{ github.event.inputs.update_notebook_visualisations == 'true' }}"
         run: |
