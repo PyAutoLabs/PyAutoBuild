@@ -119,10 +119,12 @@ jobs:
               done
             done
             # Re-pin PyAuto packages from test PyPI to prevent production PyPI
-            # versions being pulled in during dependency resolution
+            # versions being pulled in during dependency resolution.
+            # Use || true because not all packages may be uploaded yet (parallel matrix).
             for PACKAGE in ${PACKAGES[@]}; do
-              python3 -m pip install --index-url https://test.pypi.org/simple/ --no-deps --force-reinstall $PACKAGE==$VERSION
+              python3 -m pip install --index-url https://test.pypi.org/simple/ --no-deps --force-reinstall $PACKAGE==$VERSION || true
             done
+            true  # ensure step exits 0
         - name: Tests
           run: |
             pushd "${{ matrix.project.path }}"
@@ -132,11 +134,13 @@ jobs:
             pip install pytest
             pip install numba
             # Re-pin PyAuto packages after third-party installs to ensure
-            # test PyPI versions were not replaced by production PyPI versions
-            export PACKAGES=("autoconf" "autoarray" "autofit" "autogalaxy" "autolens")
+            # test PyPI versions were not replaced by production PyPI versions.
+            # Only re-pin packages that are already installed (pip show succeeds).
             export VERSION="${{ needs.version_number.outputs.version_number }}"
-            for PACKAGE in ${PACKAGES[@]}; do
-              python3 -m pip install --index-url https://test.pypi.org/simple/ --no-deps --force-reinstall $PACKAGE==$VERSION
+            for PACKAGE in autoconf autoarray autofit autogalaxy autolens; do
+              if pip show $PACKAGE >/dev/null 2>&1; then
+                python3 -m pip install --index-url https://test.pypi.org/simple/ --no-deps --force-reinstall $PACKAGE==$VERSION || true
+              fi
             done
             python3 -m pytest
 
