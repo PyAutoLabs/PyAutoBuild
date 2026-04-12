@@ -3,6 +3,11 @@ autofit:
 - Zeus # Test Model Iniitalization no good.
 - ZeusPlotter # Test Model Iniitalization no good.
 - DynestyPlotter # Test Model Iniitalization no good.
+- UltraNest # UltraNest removed from autofit, ultranest package not installed.
+- UltraNestPlotter # UltraNest removed from autofit.
+- PySwarmsGlobal # PySwarms removed from autofit.
+- PySwarmsLocal # PySwarms removed from autofit.
+- PySwarmsPlotter # PySwarms removed from autofit.
 - start_point # bug https://github.com/rhayes777/PyAutoFit/issues/1017
 autogalaxy:
 - tutorial_searches
