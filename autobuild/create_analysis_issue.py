@@ -128,7 +128,7 @@ def main():
     parser = ArgumentParser(description="Create release readiness GitHub issue")
     parser.add_argument("report", type=Path, help="Path to consolidated JSON report")
     parser.add_argument("--run-id", type=str, default="", help="GitHub Actions run ID")
-    parser.add_argument("--repo", type=str, default="Jammy2211/PyAutoBuild",
+    parser.add_argument("--repo", type=str, default="PyAutoLabs/PyAutoBuild",
                         help="GitHub repository (owner/repo)")
     parser.add_argument("--dry-run", action="store_true",
                         help="Print issue body without creating")

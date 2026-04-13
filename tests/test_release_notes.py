@@ -130,9 +130,9 @@ def test_format_pr_line():
 
 
 def test_upstream_deps_chain():
-    assert UPSTREAM_DEPS["rhayes777/PyAutoFit"] == []
-    assert UPSTREAM_DEPS["Jammy2211/PyAutoArray"] == []
-    assert "rhayes777/PyAutoFit" in UPSTREAM_DEPS["Jammy2211/PyAutoGalaxy"]
-    assert "Jammy2211/PyAutoArray" in UPSTREAM_DEPS["Jammy2211/PyAutoGalaxy"]
-    assert len(UPSTREAM_DEPS["Jammy2211/PyAutoLens"]) == 3
-    assert "Jammy2211/PyAutoGalaxy" in UPSTREAM_DEPS["Jammy2211/PyAutoLens"]
+    assert UPSTREAM_DEPS["PyAutoLabs/PyAutoFit"] == []
+    assert UPSTREAM_DEPS["PyAutoLabs/PyAutoArray"] == []
+    assert "PyAutoLabs/PyAutoFit" in UPSTREAM_DEPS["PyAutoLabs/PyAutoGalaxy"]
+    assert "PyAutoLabs/PyAutoArray" in UPSTREAM_DEPS["PyAutoLabs/PyAutoGalaxy"]
+    assert len(UPSTREAM_DEPS["PyAutoLabs/PyAutoLens"]) == 3
+    assert "PyAutoLabs/PyAutoGalaxy" in UPSTREAM_DEPS["PyAutoLabs/PyAutoLens"]

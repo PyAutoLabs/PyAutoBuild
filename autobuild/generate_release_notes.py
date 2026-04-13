@@ -19,34 +19,34 @@ from pathlib import Path
 
 # Dependency chain: downstream repos include upstream changes
 UPSTREAM_DEPS = {
-    "rhayes777/PyAutoFit": [],
-    "Jammy2211/PyAutoArray": [],
-    "Jammy2211/PyAutoGalaxy": [
-        "rhayes777/PyAutoFit",
-        "Jammy2211/PyAutoArray",
+    "PyAutoLabs/PyAutoFit": [],
+    "PyAutoLabs/PyAutoArray": [],
+    "PyAutoLabs/PyAutoGalaxy": [
+        "PyAutoLabs/PyAutoFit",
+        "PyAutoLabs/PyAutoArray",
     ],
-    "Jammy2211/PyAutoLens": [
-        "rhayes777/PyAutoFit",
-        "Jammy2211/PyAutoArray",
-        "Jammy2211/PyAutoGalaxy",
+    "PyAutoLabs/PyAutoLens": [
+        "PyAutoLabs/PyAutoFit",
+        "PyAutoLabs/PyAutoArray",
+        "PyAutoLabs/PyAutoGalaxy",
     ],
 }
 
 # Human-readable short names
 REPO_NAMES = {
-    "rhayes777/PyAutoConf": "PyAutoConf",
-    "rhayes777/PyAutoFit": "PyAutoFit",
-    "Jammy2211/PyAutoArray": "PyAutoArray",
-    "Jammy2211/PyAutoGalaxy": "PyAutoGalaxy",
-    "Jammy2211/PyAutoLens": "PyAutoLens",
+    "PyAutoLabs/PyAutoConf": "PyAutoConf",
+    "PyAutoLabs/PyAutoFit": "PyAutoFit",
+    "PyAutoLabs/PyAutoArray": "PyAutoArray",
+    "PyAutoLabs/PyAutoGalaxy": "PyAutoGalaxy",
+    "PyAutoLabs/PyAutoLens": "PyAutoLens",
 }
 
 # Base branches per repo
 BASE_BRANCHES = {
-    "rhayes777/PyAutoFit": "main",
-    "Jammy2211/PyAutoArray": "main",
-    "Jammy2211/PyAutoGalaxy": "main",
-    "Jammy2211/PyAutoLens": "main",
+    "PyAutoLabs/PyAutoFit": "main",
+    "PyAutoLabs/PyAutoArray": "main",
+    "PyAutoLabs/PyAutoGalaxy": "main",
+    "PyAutoLabs/PyAutoLens": "main",
 }
 
 

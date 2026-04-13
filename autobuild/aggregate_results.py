@@ -49,13 +49,13 @@ def classify_failure(result: dict) -> str:
 def fetch_merged_prs() -> list:
     """Fetch recently merged PRs from library and workspace repos."""
     repos = [
-        "rhayes777/PyAutoFit",
-        "Jammy2211/PyAutoArray",
-        "Jammy2211/PyAutoGalaxy",
-        "Jammy2211/PyAutoLens",
-        "Jammy2211/autofit_workspace",
-        "Jammy2211/autogalaxy_workspace",
-        "Jammy2211/autolens_workspace",
+        "PyAutoLabs/PyAutoFit",
+        "PyAutoLabs/PyAutoArray",
+        "PyAutoLabs/PyAutoGalaxy",
+        "PyAutoLabs/PyAutoLens",
+        "PyAutoLabs/autofit_workspace",
+        "PyAutoLabs/autogalaxy_workspace",
+        "PyAutoLabs/autolens_workspace",
     ]
     prs = []
     for repo in repos:

@@ -8,7 +8,7 @@ autofit:
 - PySwarmsGlobal # PySwarms removed from autofit.
 - PySwarmsLocal # PySwarms removed from autofit.
 - PySwarmsPlotter # PySwarms removed from autofit.
-- start_point # bug https://github.com/rhayes777/PyAutoFit/issues/1017
+- start_point # bug https://github.com/PyAutoLabs/PyAutoFit/issues/1017
 autogalaxy:
 - tutorial_searches
 - gui/light_centre # GUI scripts cannot be run

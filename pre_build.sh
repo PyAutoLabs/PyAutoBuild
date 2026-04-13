@@ -77,10 +77,10 @@ fi
 echo ""
 echo "=== Triggering release workflow (minor_version=$MINOR_VERSION) ==="
 gh workflow run release.yml \
-    --repo Jammy2211/PyAutoBuild \
+    --repo PyAutoLabs/PyAutoBuild \
     --field minor_version="$MINOR_VERSION" \
     --field skip_release="$SKIP_RELEASE"
 
 echo ""
 echo "Pre-build complete. Workflow dispatched."
-echo "Track it at: https://github.com/Jammy2211/PyAutoBuild/actions"
+echo "Track it at: https://github.com/PyAutoLabs/PyAutoBuild/actions"

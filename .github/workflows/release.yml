@@ -57,19 +57,19 @@ jobs:
           matrix:
             python-version: [3.12]
             project:
-              - repository: rhayes777/PyAutoConf
+              - repository: PyAutoLabs/PyAutoConf
                 ref: main
                 path: PyAutoConf
-              - repository: rhayes777/PyAutoFit
+              - repository: PyAutoLabs/PyAutoFit
                 ref: main
                 path: PyAutoFit
-              - repository: Jammy2211/PyAutoArray
+              - repository: PyAutoLabs/PyAutoArray
                 ref: main
                 path: PyAutoArray
-              - repository: Jammy2211/PyAutoGalaxy
+              - repository: PyAutoLabs/PyAutoGalaxy
                 ref: main
                 path: PyAutoGalaxy
-              - repository: Jammy2211/PyAutoLens
+              - repository: PyAutoLabs/PyAutoLens
                 ref: main
                 path: PyAutoLens
         steps:
@@ -153,27 +153,27 @@ jobs:
         - name: Checkout AutoFit
           uses: actions/checkout@v2
           with:
-            repository: Jammy2211/autofit_workspace
+            repository: PyAutoLabs/autofit_workspace
             path: autofit
         - name: Checkout AutoGalaxy
           uses: actions/checkout@v2
           with:
-            repository: Jammy2211/autogalaxy_workspace
+            repository: PyAutoLabs/autogalaxy_workspace
             path: autogalaxy
         - name: Checkout AutoLens
           uses: actions/checkout@v2
           with:
-            repository: Jammy2211/autolens_workspace
+            repository: PyAutoLabs/autolens_workspace
             path: autolens
         - name: Checkout AutoFit Test
           uses: actions/checkout@v2
           with:
-            repository: Jammy2211/autofit_workspace_test
+            repository: PyAutoLabs/autofit_workspace_test
             path: autofit_test
         - name: Checkout AutoLens Test
           uses: actions/checkout@v2
           with:
-            repository: Jammy2211/autolens_workspace_test
+            repository: PyAutoLabs/autolens_workspace_test
             path: autolens_test
         - uses: actions/checkout@v2
           with:
@@ -196,14 +196,14 @@ jobs:
         python-version: [3.12]
         project:
           - name: autofit
-            repository: rhayes777/PyAutoFit
-            workspace_repository: Jammy2211/autofit_workspace
+            repository: PyAutoLabs/PyAutoFit
+            workspace_repository: PyAutoLabs/autofit_workspace
           - name: autogalaxy
-            repository: Jammy2211/PyAutoGalaxy
-            workspace_repository: Jammy2211/autogalaxy_workspace
+            repository: PyAutoLabs/PyAutoGalaxy
+            workspace_repository: PyAutoLabs/autogalaxy_workspace
           - name: autolens
-            repository: Jammy2211/PyAutoLens
-            workspace_repository: Jammy2211/autolens_workspace
+            repository: PyAutoLabs/PyAutoLens
+            workspace_repository: PyAutoLabs/autolens_workspace
     steps:
     - name: Skip check
       if: "${{ github.event.inputs.skip_notebooks != 'true' }}"
@@ -270,27 +270,27 @@ jobs:
       run: |
         if [ ${{ matrix.project.name }} == "autofit" ]
         then
-            echo "::set-output name=repository::rhayes777/PyAutoFit"
-            echo "::set-output name=workspace_repository::Jammy2211/autofit_workspace"
+            echo "::set-output name=repository::PyAutoLabs/PyAutoFit"
+            echo "::set-output name=workspace_repository::PyAutoLabs/autofit_workspace"
             echo "::set-output name=project::autofit"
         elif [ ${{ matrix.project.name }} == "autogalaxy" ]
         then
-            echo "::set-output name=repository::Jammy2211/PyAutoGalaxy"
-            echo "::set-output name=workspace_repository::Jammy2211/autogalaxy_workspace"
+            echo "::set-output name=repository::PyAutoLabs/PyAutoGalaxy"
+            echo "::set-output name=workspace_repository::PyAutoLabs/autogalaxy_workspace"
             echo "::set-output name=project::autogalaxy"
         elif [ ${{ matrix.project.name }} == "autolens" ]
         then
-            echo "::set-output name=repository::Jammy2211/PyAutoLens"
-            echo "::set-output name=workspace_repository::Jammy2211/autolens_workspace"
+            echo "::set-output name=repository::PyAutoLabs/PyAutoLens"
+            echo "::set-output name=workspace_repository::PyAutoLabs/autolens_workspace"
             echo "::set-output name=project::autolens"
         elif [ ${{ matrix.project.name }} == "autofit_test" ]
         then
-            echo "::set-output name=repository::rhayes777/PyAutoFit"
-            echo "::set-output name=workspace_repository::Jammy2211/autofit_workspace_test"
+            echo "::set-output name=repository::PyAutoLabs/PyAutoFit"
+            echo "::set-output name=workspace_repository::PyAutoLabs/autofit_workspace_test"
             echo "::set-output name=project::autofit"
         else
-            echo "::set-output name=repository::Jammy2211/PyAutoLens"
-            echo "::set-output name=workspace_repository::Jammy2211/autolens_workspace_test"
+            echo "::set-output name=repository::PyAutoLabs/PyAutoLens"
+            echo "::set-output name=workspace_repository::PyAutoLabs/autolens_workspace_test"
             echo "::set-output name=project::autolens"
         fi
 
@@ -368,18 +368,18 @@ jobs:
       run: |
         if [ ${{ matrix.project.name }} == "autofit" ]
         then
-            echo "::set-output name=repository::Jammy2211/PyAutoGalaxy"
-            echo "::set-output name=workspace_repository::Jammy2211/autofit_workspace"
+            echo "::set-output name=repository::PyAutoLabs/PyAutoGalaxy"
+            echo "::set-output name=workspace_repository::PyAutoLabs/autofit_workspace"
             echo "::set-output name=project::autofit"
         elif [ ${{ matrix.project.name }} == "autogalaxy" ]
         then
-            echo "::set-output name=repository::Jammy2211/PyAutoGalaxy"
-            echo "::set-output name=workspace_repository::Jammy2211/autogalaxy_workspace"
+            echo "::set-output name=repository::PyAutoLabs/PyAutoGalaxy"
+            echo "::set-output name=workspace_repository::PyAutoLabs/autogalaxy_workspace"
             echo "::set-output name=project::autogalaxy"
         elif [ ${{ matrix.project.name }} == "autolens" ]
         then
-            echo "::set-output name=repository::Jammy2211/PyAutoLens"
-            echo "::set-output name=workspace_repository::Jammy2211/autolens_workspace"
+            echo "::set-output name=repository::PyAutoLabs/PyAutoLens"
+            echo "::set-output name=workspace_repository::PyAutoLabs/autolens_workspace"
             echo "::set-output name=project::autolens"
         fi
 
@@ -511,23 +511,23 @@ jobs:
     strategy:
       matrix:
         project:
-        - repository: rhayes777/PyAutoConf
+        - repository: PyAutoLabs/PyAutoConf
           ref: main
           path: PyAutoConf
           pat: PAT_RICH
-        - repository: rhayes777/PyAutoFit
+        - repository: PyAutoLabs/PyAutoFit
           ref: main
           path: PyAutoFit
           pat: PAT_RICH
-        - repository: Jammy2211/PyAutoArray
+        - repository: PyAutoLabs/PyAutoArray
           ref: main
           path: PyAutoArray
           pat: PAT_JAMES
-        - repository: Jammy2211/PyAutoGalaxy
+        - repository: PyAutoLabs/PyAutoGalaxy
           ref: main
           path: PyAutoGalaxy
           pat: PAT_JAMES
-        - repository: Jammy2211/PyAutoLens
+        - repository: PyAutoLabs/PyAutoLens
           ref: main
           path: PyAutoLens
           pat: PAT_JAMES
@@ -590,13 +590,13 @@ jobs:
       fail-fast: false
       matrix:
         project:
-          - repo: rhayes777/PyAutoFit
+          - repo: PyAutoLabs/PyAutoFit
             pat: PAT_RICH
-          - repo: Jammy2211/PyAutoArray
+          - repo: PyAutoLabs/PyAutoArray
             pat: PAT_JAMES
-          - repo: Jammy2211/PyAutoGalaxy
+          - repo: PyAutoLabs/PyAutoGalaxy
             pat: PAT_JAMES
-          - repo: Jammy2211/PyAutoLens
+          - repo: PyAutoLabs/PyAutoLens
             pat: PAT_JAMES
     steps:
     - uses: actions/checkout@v2
@@ -630,13 +630,13 @@ jobs:
       matrix:
         python-version: [3.12]
         workspace:
-          - repository: Jammy2211/autofit_workspace
+          - repository: PyAutoLabs/autofit_workspace
             name: autofit
             package: PyAutoFit
-          - repository: Jammy2211/autogalaxy_workspace
+          - repository: PyAutoLabs/autogalaxy_workspace
             name: autogalaxy
             package: PyAutoGalaxy
-          - repository: Jammy2211/autolens_workspace
+          - repository: PyAutoLabs/autolens_workspace
             name: autolens
             package: PyAutoLens
     steps:
@@ -708,16 +708,16 @@ jobs:
         python-version: [ 3.12 ]
         project:
           - name: autofit
-            repository: rhayes777/PyAutoFit
-            workspace_repository: Jammy2211/autofit_workspace
+            repository: PyAutoLabs/PyAutoFit
+            workspace_repository: PyAutoLabs/autofit_workspace
             pat: PAT_RICH
           - name: autogalaxy
-            repository: Jammy2211/PyAutoGalaxy
-            workspace_repository: Jammy2211/autogalaxy_workspace
+            repository: PyAutoLabs/PyAutoGalaxy
+            workspace_repository: PyAutoLabs/autogalaxy_workspace
             pat: PAT_JAMES
           - name: autolens
-            repository: Jammy2211/PyAutoLens
-            workspace_repository: Jammy2211/autolens_workspace
+            repository: PyAutoLabs/PyAutoLens
+            workspace_repository: PyAutoLabs/autolens_workspace
             pat: PAT_JAMES
     steps:
       - name: Configure
