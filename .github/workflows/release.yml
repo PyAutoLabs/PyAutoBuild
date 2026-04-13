@@ -514,23 +514,23 @@ jobs:
         - repository: PyAutoLabs/PyAutoConf
           ref: main
           path: PyAutoConf
-          pat: PAT_RICH
+          pat: PAT_PYAUTOLABS
         - repository: PyAutoLabs/PyAutoFit
           ref: main
           path: PyAutoFit
-          pat: PAT_RICH
+          pat: PAT_PYAUTOLABS
         - repository: PyAutoLabs/PyAutoArray
           ref: main
           path: PyAutoArray
-          pat: PAT_JAMES
+          pat: PAT_PYAUTOLABS
         - repository: PyAutoLabs/PyAutoGalaxy
           ref: main
           path: PyAutoGalaxy
-          pat: PAT_JAMES
+          pat: PAT_PYAUTOLABS
         - repository: PyAutoLabs/PyAutoLens
           ref: main
           path: PyAutoLens
-          pat: PAT_JAMES
+          pat: PAT_PYAUTOLABS
     steps:
     - uses: actions/checkout@v2
       if: "${{ github.event.inputs.skip_release != 'true' }}"
@@ -591,13 +591,13 @@ jobs:
       matrix:
         project:
           - repo: PyAutoLabs/PyAutoFit
-            pat: PAT_RICH
+            pat: PAT_PYAUTOLABS
           - repo: PyAutoLabs/PyAutoArray
-            pat: PAT_JAMES
+            pat: PAT_PYAUTOLABS
           - repo: PyAutoLabs/PyAutoGalaxy
-            pat: PAT_JAMES
+            pat: PAT_PYAUTOLABS
           - repo: PyAutoLabs/PyAutoLens
-            pat: PAT_JAMES
+            pat: PAT_PYAUTOLABS
     steps:
     - uses: actions/checkout@v2
       with:
@@ -620,7 +620,7 @@ jobs:
       TWINE_REPOSITORY: pypi
       TWINE_USERNAME: __token__
       TWINE_PASSWORD: ${{ secrets.PYPI }}
-      PAT: ${{ secrets.PAT_JAMES }}
+      PAT: ${{ secrets.PAT_PYAUTOLABS }}
     needs:
       - run_scripts
       - run_notebooks
@@ -710,15 +710,15 @@ jobs:
           - name: autofit
             repository: PyAutoLabs/PyAutoFit
             workspace_repository: PyAutoLabs/autofit_workspace
-            pat: PAT_RICH
+            pat: PAT_PYAUTOLABS
           - name: autogalaxy
             repository: PyAutoLabs/PyAutoGalaxy
             workspace_repository: PyAutoLabs/autogalaxy_workspace
-            pat: PAT_JAMES
+            pat: PAT_PYAUTOLABS
           - name: autolens
             repository: PyAutoLabs/PyAutoLens
             workspace_repository: PyAutoLabs/autolens_workspace
-            pat: PAT_JAMES
+            pat: PAT_PYAUTOLABS
     steps:
       - name: Configure
         id: configure
