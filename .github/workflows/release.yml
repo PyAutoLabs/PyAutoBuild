@@ -555,7 +555,6 @@ jobs:
         pushd "${{ matrix.project.path }}"
         VERSION="${{ needs.version_number.outputs.version_number }}"
         sed -i "s/__version__ = [\.\"\'0-9]*/__version__ = \"$VERSION\"/g" */__init__.py
-        sed -i "s/^\(\s*\"auto[a-z]*\)\(==[0-9][0-9.]*\)\{0,1\}\"/\1==$VERSION\"/g" pyproject.toml
         git commit "-am 'Updated version in __init__ to $VERSION"
     - name: Tag
       if: "${{ github.event.inputs.skip_release != 'true' }}"
@@ -572,6 +571,7 @@ jobs:
       run: |
         pushd "${{ matrix.project.path }}"
         export VERSION="${{ needs.version_number.outputs.version_number }}"
+        sed -i "s/^\(\s*\"auto[a-z]*\)\(==[0-9][0-9.]*\)\{0,1\}\"/\1==$VERSION\"/g" pyproject.toml
         python3 -m pip install --upgrade build
         python3 -m build
     - name: Upload to PyPI
