@@ -3,6 +3,8 @@ autofit:
 - Zeus # Test Model Iniitalization no good.
 - ZeusPlotter # Test Model Iniitalization no good.
 - DynestyPlotter # Test Model Iniitalization no good.
+- EmceePlotter # Needs result.search_internal, None under PYAUTO_TEST_MODE=2.
+- NautilusPlotter # Needs result.search_internal, None under PYAUTO_TEST_MODE=2.
 - UltraNest # UltraNest removed from autofit, ultranest package not installed.
 - UltraNestPlotter # UltraNest removed from autofit.
 - PySwarmsGlobal # PySwarms removed from autofit.
