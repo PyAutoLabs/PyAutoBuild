@@ -1,26 +1,11 @@
 # Test Report: autofit / plot (script)
 
-**5 scripts** | 1 failed | 1 passed | 3 skipped
+**7 scripts** | 2 passed | 5 skipped
 
 | Status | Count |
 |--------|-------|
-| failed | 1 |
-| passed | 1 |
-| skipped | 3 |
-
-## Failures
-
-### `/home/jammy/Code/PyAutoLabs/autofit_workspace/scripts/plot/EmceePlotter.py` — FAILED (2.3s)
-
-Command '['/home/jammy/venv/PyAuto/bin/python3', '/home/jammy/Code/PyAutoLabs/autofit_workspace/scripts/plot/EmceePlotter.py']' returned non-zero exit status 1.
-
-```
-Traceback (most recent call last):
-  File "/home/jammy/Code/PyAutoLabs/autofit_workspace/scripts/plot/EmceePlotter.py", line 156, in <module>
-    for walker_index in range(search_internal.get_log_prob().shape[1]):
-                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-AttributeError: 'NoneType' object has no attribute 'get_log_prob'
-```
+| passed | 2 |
+| skipped | 5 |
 
 ## Skipped
 
@@ -28,8 +13,11 @@ AttributeError: 'NoneType' object has no attribute 'get_log_prob'
 |--------|--------|
 | `DynestyPlotter.py` | Test Model Iniitalization no good. |
 | `GetDist.py` | Cant get it to install, even in optional requirements. |
+| `PySwarmsPlotter.py` | PySwarms does not support JAX. |
+| `UltraNestPlotter.py` | Test Model Iniitalization no good. |
 | `ZeusPlotter.py` | Test Model Iniitalization no good. |
 
 ## Passed
 
-- `/home/jammy/Code/PyAutoLabs/autofit_workspace/scripts/plot/NautilusPlotter.py` (1.8s)
+- `/home/jammy/Code/PyAutoLabs/autofit_workspace/scripts/plot/EmceePlotter.py` (4.3s)
+- `/home/jammy/Code/PyAutoLabs/autofit_workspace/scripts/plot/NautilusPlotter.py` (3.1s)

@@ -1,4 +1,4 @@
 jupyterlab
 ipynb-py-convert
 ipykernel
-numpy<=1.26.0
+numpy<3.0.0
