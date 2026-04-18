@@ -1,6 +1,6 @@
 autofit:
-- GetDist # Cant get it to install, even in optional requirements.
-- Zeus # Test Model Iniitalization no good.
+- get_dist # Cant get it to install, even in optional requirements.
+- mcmc # Zeus section in merged mcmc.py fails Test Model Initialization.
 - ZeusPlotter # Test Model Iniitalization no good.
 - DynestyPlotter # Test Model Iniitalization no good.
 - EmceePlotter # Needs result.search_internal, None under PYAUTO_TEST_MODE=2.
