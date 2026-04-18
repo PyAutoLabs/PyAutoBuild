@@ -634,12 +634,23 @@ jobs:
           - repository: PyAutoLabs/autofit_workspace
             name: autofit
             package: PyAutoFit
+            generate_notebooks: true
+            bump_colab_urls: true
           - repository: PyAutoLabs/autogalaxy_workspace
             name: autogalaxy
             package: PyAutoGalaxy
+            generate_notebooks: true
+            bump_colab_urls: true
           - repository: PyAutoLabs/autolens_workspace
             name: autolens
             package: PyAutoLens
+            generate_notebooks: true
+            bump_colab_urls: true
+          - repository: Jammy2211/euclid_strong_lens_modeling_pipeline
+            name: euclid_pipeline
+            package: PyAutoLens
+            generate_notebooks: false
+            bump_colab_urls: false
     steps:
     - uses: actions/checkout@v2
       if: "${{ github.event.inputs.skip_release != 'true' }}"
@@ -672,7 +683,7 @@ jobs:
         sed -i "s/$PACKAGE v[0-9]\{4\}\.[0-9]*\.[0-9]*\.[0-9]*/$PACKAGE v$VERSION/g" README.rst README.md 2>/dev/null || true
         git add README.rst README.md 2>/dev/null || true
     - name: Update jupyter notebooks
-      if: "${{ github.event.inputs.skip_release != 'true' }}"
+      if: "${{ github.event.inputs.skip_release != 'true' && matrix.workspace.generate_notebooks == true }}"
       run: |
         export PYTHONPATH=$PYTHONPATH:$(pwd)/PyAutoBuild
         AUTOBUILD_PATH="$(pwd)/PyAutoBuild/autobuild"
@@ -689,7 +700,7 @@ jobs:
         git add version.txt
         git commit -m "Release $VERSION: pin workspace version" || true
     - name: Bump Colab URL tag refs
-      if: "${{ github.event.inputs.skip_release != 'true' }}"
+      if: "${{ github.event.inputs.skip_release != 'true' && matrix.workspace.bump_colab_urls == true }}"
       run: |
         VERSION="${{ needs.version_number.outputs.version_number }}"
         pushd workspace
