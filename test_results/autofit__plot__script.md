@@ -1,11 +1,11 @@
 # Test Report: autofit / plot (script)
 
-**7 scripts** | 2 passed | 5 skipped
+**5 scripts** | 2 passed | 3 skipped
 
 | Status | Count |
 |--------|-------|
 | passed | 2 |
-| skipped | 5 |
+| skipped | 3 |
 
 ## Skipped
 
@@ -13,8 +13,6 @@
 |--------|--------|
 | `DynestyPlotter.py` | Test Model Iniitalization no good. |
 | `GetDist.py` | Cant get it to install, even in optional requirements. |
-| `PySwarmsPlotter.py` | PySwarms does not support JAX. |
-| `UltraNestPlotter.py` | Test Model Iniitalization no good. |
 | `ZeusPlotter.py` | Test Model Iniitalization no good. |
 
 ## Passed

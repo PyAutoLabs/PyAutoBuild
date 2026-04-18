@@ -1,20 +1,17 @@
 # Test Report: autofit / searches (script)
 
-**11 scripts** | 6 passed | 5 skipped
+**8 scripts** | 6 passed | 2 skipped
 
 | Status | Count |
 |--------|-------|
 | passed | 6 |
-| skipped | 5 |
+| skipped | 2 |
 
 ## Skipped
 
 | Script | Reason |
 |--------|--------|
 | `Zeus.py` | Test Model Iniitalization no good. |
-| `PySwarmsGlobal.py` | PySwarms does not support JAX. |
-| `PySwarmsLocal.py` | PySwarms does not support JAX. |
-| `UltraNest.py` | UltraNest does not support JAX. |
 | `start_point.py` | bug https://github.com/rhayes777/PyAutoFit/issues/1017 |
 
 ## Passed

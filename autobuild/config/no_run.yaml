@@ -5,11 +5,6 @@ autofit:
 - DynestyPlotter # Test Model Iniitalization no good.
 - EmceePlotter # Needs result.search_internal, None under PYAUTO_TEST_MODE=2.
 - NautilusPlotter # Needs result.search_internal, None under PYAUTO_TEST_MODE=2.
-- UltraNest # UltraNest removed from autofit, ultranest package not installed.
-- UltraNestPlotter # UltraNest removed from autofit.
-- PySwarmsGlobal # PySwarms removed from autofit.
-- PySwarmsLocal # PySwarms removed from autofit.
-- PySwarmsPlotter # PySwarms removed from autofit.
 - start_point # bug https://github.com/PyAutoLabs/PyAutoFit/issues/1017
 autogalaxy:
 - tutorial_searches
