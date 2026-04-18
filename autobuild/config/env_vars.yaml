@@ -8,7 +8,7 @@
 #   - Patterns without '/' match the file stem exactly
 
 defaults:
-  PYAUTOFIT_TEST_MODE: "2"
+  PYAUTO_TEST_MODE: "2"
   PYAUTO_SMALL_DATASETS: "1"
   PYAUTO_DISABLE_JAX: "1"
   PYAUTO_FAST_PLOTS: "1"

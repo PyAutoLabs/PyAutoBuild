@@ -779,9 +779,9 @@ jobs:
         run: |
           if [[ ${{ matrix.project.name }} == *_test ]]
           then
-            export PYAUTOFIT_TEST_MODE=0
+            export PYAUTO_TEST_MODE=0
           else
-            export PYAUTOFIT_TEST_MODE=1
+            export PYAUTO_TEST_MODE=1
             export PYAUTO_WORKSPACE_SMALL_DATASETS=1
             export PYAUTO_FAST_PLOTS=1
           fi
