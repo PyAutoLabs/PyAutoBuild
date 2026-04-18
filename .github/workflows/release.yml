@@ -680,16 +680,22 @@ jobs:
         python3 "$AUTOBUILD_PATH/generate.py" ${{ matrix.workspace.name }}
         git add *.ipynb
         git commit -m "Release ${{ needs.version_number.outputs.version_number }}: update notebooks and version" || true
-    - name: Release
+    - name: Write workspace version.txt
+      if: "${{ github.event.inputs.skip_release != 'true' }}"
+      run: |
+        VERSION="${{ needs.version_number.outputs.version_number }}"
+        pushd workspace
+        echo "$VERSION" > version.txt
+        git add version.txt
+        git commit -m "Release $VERSION: pin workspace version" || true
+    - name: Tag and push to main
       if: "${{ github.event.inputs.skip_release != 'true' }}"
       run: |
         cd workspace
-        git checkout release
-        git merge main
         VERSION="${{ needs.version_number.outputs.version_number }}"
         git tag -m "Release $VERSION" -a "$VERSION"
-        git push
-        git push --tags
+        git push origin main
+        git push origin --tags
 
 
   run_notebooks_and_release_workspaces:
@@ -794,24 +800,14 @@ jobs:
         run: |
           git config --global user.email "richard@rghsoftware.co.uk"
           git config --global user.name "GitHub Actions bot"
-      - name: Switch to release branch
-        if: "${{ github.event.inputs.update_notebook_visualisations == 'true' }}"
-        run: |
-          cd workspace
-          git checkout release
-      - name: Merge main into release
-        if: "${{ github.event.inputs.update_notebook_visualisations == 'true' }}"
-        run: |
-          cd workspace
-          git merge main
       - name: Commit visualizations
         if: "${{ github.event.inputs.update_notebook_visualisations == 'true' }}"
         run: |
           cd workspace
           git add .
           git commit -m "Updated notebooks with visualizations" || true
-      - name: Push to release branch
+      - name: Push to main
         if: "${{ github.event.inputs.update_notebook_visualisations == 'true' }}"
         run: |
           cd workspace
-          git push origin release
+          git push origin main
