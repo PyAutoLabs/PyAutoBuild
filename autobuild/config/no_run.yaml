@@ -1,10 +1,10 @@
 autofit:
-- GetDist # Cant get it to install, even in optional requirements.
-- Zeus # Test Model Iniitalization no good.
-- ZeusPlotter # Test Model Iniitalization no good.
-- DynestyPlotter # Test Model Iniitalization no good.
-- EmceePlotter # Needs result.search_internal, None under PYAUTO_TEST_MODE=2.
-- NautilusPlotter # Needs result.search_internal, None under PYAUTO_TEST_MODE=2.
+- get_dist # Cant get it to install, even in optional requirements.
+- mcmc # Zeus section in merged mcmc.py fails Test Model Initialization.
+- zeus_plotter # Test Model Iniitalization no good.
+- dynesty_plotter # Test Model Iniitalization no good.
+- emcee_plotter # Needs result.search_internal, None under PYAUTO_TEST_MODE=2.
+- nautilus_plotter # Needs result.search_internal, None under PYAUTO_TEST_MODE=2.
 - start_point # bug https://github.com/PyAutoLabs/PyAutoFit/issues/1017
 autogalaxy:
 - tutorial_searches
