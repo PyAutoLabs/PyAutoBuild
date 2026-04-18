@@ -83,6 +83,8 @@ All scripts in `autobuild/` are run from within a checked-out workspace director
 - **`generate.py <project>`** — Converts Python scripts in `scripts/` to `.ipynb` notebooks in `notebooks/`, run from within the workspace root
 - **`script_matrix.py <project1> [project2 ...]`** — Outputs a JSON matrix of `{name, directory}` pairs for GitHub Actions matrix strategy
 - **`tag_and_merge.py --version <version>`** — Tags library repos for release
+- **`url_check.sh [directory]`** — Fails if any forbidden Binder/Colab URL pattern appears in `*.rst`, `*.md`, `*.ipynb`, or `*.py` under the directory. Forbidden: any `mybinder.org` URL, Colab URLs with `Jammy2211/` owner, and Colab URLs pinned to `/blob/release/`. Each affected workspace and library repo runs this in CI to prevent regressions.
+- **`bump_colab_urls.sh <new-tag>`** — Rewrites every `colab.research.google.com/github/PyAutoLabs/<workspace>/blob/<old-tag>/...` URL in cwd to use `<new-tag>`. Called by the `release_workspaces` and `bump_library_colab_urls` jobs in `release.yml` so README/docs Colab links always pin to the just-released workspace tag. Idempotent; skips URLs not in canonical PyAutoLabs/date-tagged form.
 
 ## Architecture
 

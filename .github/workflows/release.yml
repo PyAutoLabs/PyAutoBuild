@@ -688,6 +688,14 @@ jobs:
         echo "$VERSION" > version.txt
         git add version.txt
         git commit -m "Release $VERSION: pin workspace version" || true
+    - name: Bump Colab URL tag refs
+      if: "${{ github.event.inputs.skip_release != 'true' }}"
+      run: |
+        VERSION="${{ needs.version_number.outputs.version_number }}"
+        pushd workspace
+        bash "$GITHUB_WORKSPACE/PyAutoBuild/autobuild/bump_colab_urls.sh" "$VERSION"
+        git add -A
+        git commit -m "Release $VERSION: bump Colab URL tag refs" || true
     - name: Tag and push to main
       if: "${{ github.event.inputs.skip_release != 'true' }}"
       run: |
@@ -697,6 +705,43 @@ jobs:
         git push origin main
         git push origin --tags
 
+
+  bump_library_colab_urls:
+    runs-on: ubuntu-latest
+    env:
+      PAT: ${{ secrets.PAT_PYAUTOLABS }}
+    needs:
+      - release
+      - version_number
+    if: "${{ github.event.inputs.skip_release != 'true' }}"
+    strategy:
+      fail-fast: false
+      matrix:
+        library:
+          - PyAutoLabs/PyAutoFit
+          - PyAutoLabs/PyAutoGalaxy
+          - PyAutoLabs/PyAutoLens
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        path: PyAutoBuild
+    - name: Checkout library
+      run: |
+        git clone -b main "https://$PAT@github.com/${{ matrix.library }}.git" library
+    - name: Configure Git
+      run: |
+        git config --global user.email "richard@rghsoftware.co.uk"
+        git config --global user.name "GitHub Actions bot"
+    - name: Bump Colab URL tag refs
+      run: |
+        VERSION="${{ needs.version_number.outputs.version_number }}"
+        pushd library
+        bash "$GITHUB_WORKSPACE/PyAutoBuild/autobuild/bump_colab_urls.sh" "$VERSION"
+        if ! git diff --quiet; then
+          git add -A
+          git commit -m "Release $VERSION: bump Colab URL tag refs"
+          git push origin main
+        fi
 
   run_notebooks_and_release_workspaces:
     runs-on: ubuntu-latest
