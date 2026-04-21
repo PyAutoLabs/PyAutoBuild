@@ -7,4 +7,6 @@ autolens:
 - imaging/advanced/chaining/hyper_mode/extensions.py
 autofit_test:
 autolens_test:
+howtogalaxy:
+howtolens:
 BSc_Galaxies_Project:

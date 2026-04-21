@@ -30,12 +30,14 @@ This script does the following for each repo:
 | `autolens_workspace` | yes | yes (`autolens`) | yes |
 | `autofit_workspace_test` | yes | no | yes |
 | `autolens_workspace_test` | yes | no | yes |
+| `HowToGalaxy` | yes | yes (`howtogalaxy`) | yes |
+| `HowToLens` | yes | yes (`howtolens`) | yes |
 
 `generate.py` is run from the workspace root with `PYTHONPATH` pointing at `PyAutoBuild/autobuild/`. Only specific safe directories are committed — never `output/`, `output_model/`, or run-generated artefacts. After all workspaces are done, PyAutoBuild itself is committed and pushed, then `gh workflow run release.yml` dispatches the GitHub Actions release.
 
 ## Workspace Folder Structure
 
-Each workspace repo (`autofit_workspace`, `autogalaxy_workspace`, `autolens_workspace`, and their `_test` variants) has the following expected structure. **Only these paths should ever be committed.**
+Each workspace repo (`autofit_workspace`, `autogalaxy_workspace`, `autolens_workspace`, their `_test` variants, and the lecture repos `HowToGalaxy`/`HowToLens`) has the following expected structure. **Only these paths should ever be committed.**
 
 | Folder / file | autofit | autogalaxy | autolens | Notes |
 |---|---|---|---|---|
@@ -84,7 +86,7 @@ All scripts in `autobuild/` are run from within a checked-out workspace director
 - **`script_matrix.py <project1> [project2 ...]`** — Outputs a JSON matrix of `{name, directory}` pairs for GitHub Actions matrix strategy
 - **`tag_and_merge.py --version <version>`** — Tags library repos for release
 - **`url_check.sh [directory]`** — Fails if any forbidden Binder/Colab URL pattern appears in `*.rst`, `*.md`, `*.ipynb`, or `*.py` under the directory. Forbidden: any `mybinder.org` URL, Colab URLs with `Jammy2211/` owner, and Colab URLs pinned to `/blob/release/`. Each affected workspace and library repo runs this in CI to prevent regressions.
-- **`bump_colab_urls.sh <new-tag>`** — Rewrites every `colab.research.google.com/github/PyAutoLabs/<workspace>/blob/<old-tag>/...` URL in cwd to use `<new-tag>`. Called by the `release_workspaces` and `bump_library_colab_urls` jobs in `release.yml` so README/docs Colab links always pin to the just-released workspace tag. Idempotent; skips URLs not in canonical PyAutoLabs/date-tagged form.
+- **`bump_colab_urls.sh <new-tag>`** — Rewrites every `colab.research.google.com/github/PyAutoLabs/<repo>/blob/<old-tag>/...` URL in cwd to use `<new-tag>`, where `<repo>` is one of `autofit_workspace`, `autogalaxy_workspace`, `autolens_workspace`, `HowToGalaxy`, `HowToLens`. Called by the `release_workspaces` and `bump_library_colab_urls` jobs in `release.yml` so README/docs Colab links always pin to the just-released tag. Idempotent; skips URLs not in canonical PyAutoLabs/date-tagged form.
 
 ## Architecture
 
