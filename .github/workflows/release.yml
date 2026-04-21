@@ -175,13 +175,23 @@ jobs:
           with:
             repository: PyAutoLabs/autolens_workspace_test
             path: autolens_test
+        - name: Checkout HowToGalaxy
+          uses: actions/checkout@v2
+          with:
+            repository: PyAutoLabs/HowToGalaxy
+            path: howtogalaxy
+        - name: Checkout HowToLens
+          uses: actions/checkout@v2
+          with:
+            repository: PyAutoLabs/HowToLens
+            path: howtolens
         - uses: actions/checkout@v2
           with:
               path: PyAutoBuild
         - name: Make script matrix
           id: script_matrix
           run: |
-            matrix="$(./PyAutoBuild/autobuild/script_matrix.py autofit autogalaxy autolens autofit_test autolens_test)"
+            matrix="$(./PyAutoBuild/autobuild/script_matrix.py autofit autogalaxy autolens autofit_test autolens_test howtogalaxy howtolens)"
             echo "::set-output name=matrix::$matrix"
 
   generate_notebooks:
@@ -204,6 +214,12 @@ jobs:
           - name: autolens
             repository: PyAutoLabs/PyAutoLens
             workspace_repository: PyAutoLabs/autolens_workspace
+          - name: howtogalaxy
+            repository: PyAutoLabs/PyAutoGalaxy
+            workspace_repository: PyAutoLabs/HowToGalaxy
+          - name: howtolens
+            repository: PyAutoLabs/PyAutoLens
+            workspace_repository: PyAutoLabs/HowToLens
     steps:
     - name: Skip check
       if: "${{ github.event.inputs.skip_notebooks != 'true' }}"
@@ -288,6 +304,16 @@ jobs:
             echo "::set-output name=repository::PyAutoLabs/PyAutoFit"
             echo "::set-output name=workspace_repository::PyAutoLabs/autofit_workspace_test"
             echo "::set-output name=project::autofit"
+        elif [ ${{ matrix.project.name }} == "howtogalaxy" ]
+        then
+            echo "::set-output name=repository::PyAutoLabs/PyAutoGalaxy"
+            echo "::set-output name=workspace_repository::PyAutoLabs/HowToGalaxy"
+            echo "::set-output name=project::autogalaxy"
+        elif [ ${{ matrix.project.name }} == "howtolens" ]
+        then
+            echo "::set-output name=repository::PyAutoLabs/PyAutoLens"
+            echo "::set-output name=workspace_repository::PyAutoLabs/HowToLens"
+            echo "::set-output name=project::autolens"
         else
             echo "::set-output name=repository::PyAutoLabs/PyAutoLens"
             echo "::set-output name=workspace_repository::PyAutoLabs/autolens_workspace_test"
@@ -380,6 +406,16 @@ jobs:
         then
             echo "::set-output name=repository::PyAutoLabs/PyAutoLens"
             echo "::set-output name=workspace_repository::PyAutoLabs/autolens_workspace"
+            echo "::set-output name=project::autolens"
+        elif [ ${{ matrix.project.name }} == "howtogalaxy" ]
+        then
+            echo "::set-output name=repository::PyAutoLabs/PyAutoGalaxy"
+            echo "::set-output name=workspace_repository::PyAutoLabs/HowToGalaxy"
+            echo "::set-output name=project::autogalaxy"
+        elif [ ${{ matrix.project.name }} == "howtolens" ]
+        then
+            echo "::set-output name=repository::PyAutoLabs/PyAutoLens"
+            echo "::set-output name=workspace_repository::PyAutoLabs/HowToLens"
             echo "::set-output name=project::autolens"
         fi
 
@@ -643,6 +679,16 @@ jobs:
             bump_colab_urls: true
           - repository: PyAutoLabs/autolens_workspace
             name: autolens
+            package: PyAutoLens
+            generate_notebooks: true
+            bump_colab_urls: true
+          - repository: PyAutoLabs/HowToGalaxy
+            name: howtogalaxy
+            package: PyAutoGalaxy
+            generate_notebooks: true
+            bump_colab_urls: true
+          - repository: PyAutoLabs/HowToLens
+            name: howtolens
             package: PyAutoLens
             generate_notebooks: true
             bump_colab_urls: true
