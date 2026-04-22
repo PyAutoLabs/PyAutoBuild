@@ -9,7 +9,7 @@
 #
 # <repo> is one of:
 #   autofit_workspace, autogalaxy_workspace, autolens_workspace
-#   HowToGalaxy, HowToLens
+#   HowToGalaxy, HowToLens, HowToFit
 # <old-tag> must match the date-based scheme YYYY.M.D.B (anything else is left alone,
 # so the bumper is a no-op until the URL sweep migrates URLs to canonical form).
 # The script is idempotent: running it twice with the same tag is a no-op.
@@ -27,7 +27,7 @@ if ! [[ "$NEW_TAG" =~ ^[0-9]{4}\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
   exit 2
 fi
 
-PATTERN='(colab\.research\.google\.com/github/PyAutoLabs/((autofit|autogalaxy|autolens)_workspace|HowToGalaxy|HowToLens)/blob/)[0-9]{4}\.[0-9]+\.[0-9]+\.[0-9]+/'
+PATTERN='(colab\.research\.google\.com/github/PyAutoLabs/((autofit|autogalaxy|autolens)_workspace|HowToGalaxy|HowToLens|HowToFit)/blob/)[0-9]{4}\.[0-9]+\.[0-9]+\.[0-9]+/'
 REPLACE="\${1}${NEW_TAG}/"
 
 find . -type f \( -name '*.rst' -o -name '*.md' -o -name '*.ipynb' -o -name '*.py' \) \

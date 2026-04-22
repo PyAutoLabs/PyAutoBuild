@@ -63,6 +63,7 @@ run_workspace "autolens_workspace_test"              "autolens"     false
 run_workspace "euclid_strong_lens_modeling_pipeline" ""             false
 run_workspace "HowToGalaxy"                          "howtogalaxy"
 run_workspace "HowToLens"                            "howtolens"
+run_workspace "HowToFit"                             "howtofit"
 
 # Commit and push PyAutoBuild itself
 echo ""
