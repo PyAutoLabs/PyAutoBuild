@@ -53,3 +53,4 @@ howtolens:
 - tutorial_searches
 - tutorial_5_borders # Cant get right masks, need proper update.
 - tutorial_6_model_fit # InversionException due to test mode
+howtofit: []

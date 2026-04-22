@@ -185,13 +185,18 @@ jobs:
           with:
             repository: PyAutoLabs/HowToLens
             path: howtolens
+        - name: Checkout HowToFit
+          uses: actions/checkout@v2
+          with:
+            repository: PyAutoLabs/HowToFit
+            path: howtofit
         - uses: actions/checkout@v2
           with:
               path: PyAutoBuild
         - name: Make script matrix
           id: script_matrix
           run: |
-            matrix="$(./PyAutoBuild/autobuild/script_matrix.py autofit autogalaxy autolens autofit_test autolens_test howtogalaxy howtolens)"
+            matrix="$(./PyAutoBuild/autobuild/script_matrix.py autofit autogalaxy autolens autofit_test autolens_test howtogalaxy howtolens howtofit)"
             echo "::set-output name=matrix::$matrix"
 
   generate_notebooks:
@@ -220,6 +225,9 @@ jobs:
           - name: howtolens
             repository: PyAutoLabs/PyAutoLens
             workspace_repository: PyAutoLabs/HowToLens
+          - name: howtofit
+            repository: PyAutoLabs/PyAutoFit
+            workspace_repository: PyAutoLabs/HowToFit
     steps:
     - name: Skip check
       if: "${{ github.event.inputs.skip_notebooks != 'true' }}"
@@ -314,6 +322,11 @@ jobs:
             echo "::set-output name=repository::PyAutoLabs/PyAutoLens"
             echo "::set-output name=workspace_repository::PyAutoLabs/HowToLens"
             echo "::set-output name=project::autolens"
+        elif [ ${{ matrix.project.name }} == "howtofit" ]
+        then
+            echo "::set-output name=repository::PyAutoLabs/PyAutoFit"
+            echo "::set-output name=workspace_repository::PyAutoLabs/HowToFit"
+            echo "::set-output name=project::autofit"
         else
             echo "::set-output name=repository::PyAutoLabs/PyAutoLens"
             echo "::set-output name=workspace_repository::PyAutoLabs/autolens_workspace_test"
@@ -417,6 +430,11 @@ jobs:
             echo "::set-output name=repository::PyAutoLabs/PyAutoLens"
             echo "::set-output name=workspace_repository::PyAutoLabs/HowToLens"
             echo "::set-output name=project::autolens"
+        elif [ ${{ matrix.project.name }} == "howtofit" ]
+        then
+            echo "::set-output name=repository::PyAutoLabs/PyAutoFit"
+            echo "::set-output name=workspace_repository::PyAutoLabs/HowToFit"
+            echo "::set-output name=project::autofit"
         fi
 
     - uses: actions/checkout@v2
@@ -690,6 +708,11 @@ jobs:
           - repository: PyAutoLabs/HowToLens
             name: howtolens
             package: PyAutoLens
+            generate_notebooks: true
+            bump_colab_urls: true
+          - repository: PyAutoLabs/HowToFit
+            name: howtofit
+            package: PyAutoFit
             generate_notebooks: true
             bump_colab_urls: true
           - repository: Jammy2211/euclid_strong_lens_modeling_pipeline
