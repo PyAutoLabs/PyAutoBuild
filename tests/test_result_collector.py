@@ -103,8 +103,8 @@ def test_parse_no_run_reasons():
         return  # Skip if config not available
 
     reasons = parse_no_run_reasons(config_path, "autofit")
-    assert "GetDist" in reasons
-    assert "install" in reasons["GetDist"].lower()
+    assert "get_dist" in reasons
+    assert "install" in reasons["get_dist"].lower()
 
     reasons_lens = parse_no_run_reasons(config_path, "autolens")
     assert "gui/mask" in reasons_lens
