@@ -171,7 +171,7 @@ def execute_notebooks_in_folder(
     # Infrastructure files — always skip, never report
     infra_skip = ["__init__", "README"]
     no_run_list.extend(infra_skip)
-    files = list(Path.cwd().rglob(f"{directory}/**/*.ipynb"))
+    files = list((Path.cwd() / directory).rglob("*.ipynb"))
 
     print(f"Found {len(files)} notebooks")
 
@@ -300,7 +300,7 @@ def find_scripts_in_folder(directory: str) -> List[Path]:
     -------
     A list of paths to the scripts
     """
-    files = list(Path.cwd().rglob(f"{directory}/**/*.py"))
+    files = list((Path.cwd() / directory).rglob("*.py"))
     return sorted(
         files,
         key=lambda f: (
