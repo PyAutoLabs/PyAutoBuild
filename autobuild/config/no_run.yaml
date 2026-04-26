@@ -12,8 +12,6 @@ autogalaxy:
 - gui/mask_extra_galaxies # GUI scripts cannot be run
 - gui/mask # GUI scripts cannot be run
 - gui/extra_galaxies_centres # GUI scripts cannot be run
-- fits_make # Test mode does not output .fits images.
-- png_make # Test mode does not output .png images.
 - examples/searches # Test mode breaks search visualization.
 - data_fitting # Test mode breaks .fits file output
 - ellipse/database # Ellipse model needs refactor and JAX support
@@ -28,8 +26,6 @@ autolens:
 - gui/positions # GUI scripts cannot be run
 - deflections # Output HDU not supported for VectorYX Detections.
 - deflections_source_snr # Output HDU not supported for VectorYX Detections.
-- fits_make # Test mode does not output .fits images.
-- png_make # Test mode does not output .png images.
 - time_delays # Test mode does not support cosmology ift
 - hpc/example_cpu # HPC paths dont exist locally.
 - examples/searches # Test mode breaks search visualization.
