@@ -1,8 +1,0 @@
-autofit:
-- ./howtofit/chapter_1_introduction/gaussian.ipynb
-- ./howtofit/chapter_1_introduction/profiles.ipynb
-- ./howtofit/chapter_database/profiles.ipynb
-- ./overview/new_model_component/linear_fit.ipynb
-autogalaxy:
-autolens:
-- /imaging/advanced/chaining/hyper_mode/extensions.ipynb

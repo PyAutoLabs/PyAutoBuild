@@ -1,6 +1,3 @@
-autofit: []
-autogalaxy: []
-autolens:
-  - start_here
-autofit_test: []
-autolens_test: []
+# Fallback only — autofit / autogalaxy / autolens and the *_test workspaces
+# now own their own visualise_notebooks.yaml in config/build/. This file is
+# kept for HowTo* / BSc_Galaxies_Project workspaces until they are migrated.

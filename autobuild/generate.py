@@ -24,13 +24,20 @@ args = parser.parse_args()
 
 WORKSPACE_PATH = Path.cwd()
 CONFIG_PATH = WORKSPACE_PATH.parent / "PyAutoBuild/autobuild/config"
+WORKSPACE_BUILD_CONFIG = WORKSPACE_PATH / "config" / "build"
 
 project = args.project
 
-with open(path.join(CONFIG_PATH, "copy_files.yaml"), "r+") as f:
-    copy_files_dict = yaml.safe_load(f)
-
-copy_files_list = copy_files_dict[project] or []
+# copy_files.yaml: prefer workspace config/build/ (flat list), fall back to
+# autobuild's keyed dict indexed by project.
+workspace_copy_files = WORKSPACE_BUILD_CONFIG / "copy_files.yaml"
+if workspace_copy_files.exists():
+    with open(workspace_copy_files) as f:
+        copy_files_list = yaml.safe_load(f) or []
+else:
+    with open(path.join(CONFIG_PATH, "copy_files.yaml"), "r+") as f:
+        copy_files_dict = yaml.safe_load(f)
+    copy_files_list = copy_files_dict.get(project) or []
 
 
 def is_copy_file(file_path):

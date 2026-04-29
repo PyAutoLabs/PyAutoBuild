@@ -53,8 +53,15 @@ else:
     no_run_list = no_run_data or []
 
 if visualise:
-    with open(AUTOBUILD_CONFIG / "visualise_notebooks.yaml") as f:
-        visualise_dict = yaml.safe_load(f)[project]
+    # visualise_notebooks.yaml: prefer workspace config/build/ (flat list),
+    # fall back to autobuild's keyed dict indexed by project.
+    workspace_visualise = WORKSPACE_BUILD_CONFIG / "visualise_notebooks.yaml"
+    if workspace_visualise.exists():
+        with open(workspace_visualise) as f:
+            visualise_dict = yaml.safe_load(f) or []
+    else:
+        with open(AUTOBUILD_CONFIG / "visualise_notebooks.yaml") as f:
+            visualise_dict = yaml.safe_load(f).get(project) or []
 else:
     visualise_dict = None
 

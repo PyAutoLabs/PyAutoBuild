@@ -103,12 +103,23 @@ def correlate_failures_with_prs(failures: list, prs: list) -> dict:
     return correlations
 
 
+SLOWEST_TOP_N = 25
+
+
 def aggregate(results_dir: Path) -> dict:
     """Read all JSON result files and produce a consolidated report."""
     json_files = sorted(results_dir.glob("**/*.json"))
     if not json_files:
         print(f"No JSON result files found in {results_dir}", file=sys.stderr)
-        return {"runs": [], "summary": {}, "failures": [], "skipped": []}
+        return {
+            "runs": [],
+            "summary": {},
+            "failures": [],
+            "skipped": [],
+            "slowest": [],
+            "run_path": str(results_dir),
+            "run_label": results_dir.name,
+        }
 
     runs = []
     all_results = []
@@ -128,17 +139,38 @@ def aggregate(results_dir: Path) -> dict:
         summary[status] = summary.get(status, 0) + 1
 
     per_project = {}
+    per_project_duration = {}
     for r in all_results:
         proj = r["_project"]
         status = r.get("status", "unknown")
         per_project.setdefault(proj, {})
         per_project[proj][status] = per_project[proj].get(status, 0) + 1
+        per_project_duration[proj] = round(
+            per_project_duration.get(proj, 0.0) + float(r.get("duration_seconds", 0.0)),
+            2,
+        )
 
     failures = [r for r in all_results if r.get("status") in ("failed", "timeout")]
     for f in failures:
         f["classification"] = classify_failure(f)
 
     skipped = [r for r in all_results if r.get("status") == "skipped"]
+
+    # Top-N slowest scripts across the whole run, regardless of status —
+    # useful for spotting timing regressions before they cross the timeout.
+    timed_results = [r for r in all_results if float(r.get("duration_seconds", 0.0)) > 0]
+    timed_results.sort(key=lambda r: float(r.get("duration_seconds", 0.0)), reverse=True)
+    slowest = []
+    for r in timed_results[:SLOWEST_TOP_N]:
+        slim = _clean_result(r)
+        # Preserve the project label so the markdown row can show it.
+        slim["project"] = r.get("_project", "")
+        slowest.append(slim)
+
+    total_duration = round(
+        sum(float(r.get("duration_seconds", 0.0)) for r in all_results),
+        2,
+    )
 
     # Fetch merged PRs for correlation
     prs = fetch_merged_prs()
@@ -161,8 +193,13 @@ def aggregate(results_dir: Path) -> dict:
     has_failures = len(failures) > 0
     return {
         "ready": not has_failures,
+        "run_path": str(results_dir),
+        "run_label": results_dir.name,
+        "total_duration_seconds": total_duration,
         "summary": summary,
         "per_project": per_project,
+        "per_project_duration_seconds": per_project_duration,
+        "slowest": slowest,
         "failures": [_clean_result(f) for f in failures],
         "failure_pr_correlations": pr_correlations,
         "skipped": [_clean_result(s) for s in skipped],
@@ -184,6 +221,20 @@ def generate_markdown(report: dict) -> str:
     lines.append("")
     lines.append(f"**Status: {status}**")
     lines.append("")
+
+    run_label = report.get("run_label", "")
+    run_path = report.get("run_path", "")
+    total_duration = report.get("total_duration_seconds")
+    meta_parts = []
+    if run_label:
+        meta_parts.append(f"**Run:** `{run_label}`")
+    if run_path:
+        meta_parts.append(f"**Path:** `{run_path}`")
+    if total_duration is not None:
+        meta_parts.append(f"**Total duration:** {total_duration:.1f}s")
+    if meta_parts:
+        lines.append("  •  ".join(meta_parts))
+        lines.append("")
 
     # Slow-skipped and needs-fix scripts — surface at the top so they
     # can't be missed
@@ -239,13 +290,40 @@ def generate_markdown(report: dict) -> str:
 
     # Per-project breakdown
     per_project = report.get("per_project", {})
+    per_project_duration = report.get("per_project_duration_seconds", {})
     if per_project:
         lines.append("## Per-Project Breakdown")
         lines.append("")
-        lines.append("| Project | Passed | Failed | Skipped | Timeout |")
-        lines.append("|---------|--------|--------|---------|---------|")
+        lines.append("| Project | Passed | Failed | Skipped | Timeout | Duration |")
+        lines.append("|---------|--------|--------|---------|---------|----------|")
         for proj, counts in sorted(per_project.items()):
-            lines.append(f"| {proj} | {counts.get('passed', 0)} | {counts.get('failed', 0)} | {counts.get('skipped', 0)} | {counts.get('timeout', 0)} |")
+            duration = per_project_duration.get(proj, 0.0)
+            lines.append(
+                f"| {proj} | {counts.get('passed', 0)} | "
+                f"{counts.get('failed', 0)} | {counts.get('skipped', 0)} | "
+                f"{counts.get('timeout', 0)} | {duration:.1f}s |"
+            )
+        lines.append("")
+
+    # Slowest scripts (cross-status) — surfaces timing regressions before
+    # they become timeouts.
+    slowest = report.get("slowest", []) or []
+    if slowest:
+        total = report.get("total_duration_seconds") or 0.0
+        lines.append(f"## Slowest scripts (top {len(slowest)})")
+        lines.append("")
+        lines.append("| Script | Project | Status | Duration | Share |")
+        lines.append("|--------|---------|--------|----------|-------|")
+        for s in slowest:
+            duration = float(s.get("duration_seconds", 0.0))
+            share = (duration / total * 100.0) if total else 0.0
+            file_path = s.get("file", "unknown")
+            project = s.get("project", "")
+            status_s = s.get("status", "unknown")
+            lines.append(
+                f"| `{file_path}` | {project} | {status_s} | "
+                f"{duration:.1f}s | {share:.1f}% |"
+            )
         lines.append("")
 
     # Failures
