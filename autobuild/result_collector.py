@@ -58,6 +58,10 @@ class RunReport:
         return counts
 
     @property
+    def total_duration_seconds(self) -> float:
+        return round(sum(r.duration_seconds for r in self.results), 2)
+
+    @property
     def has_failures(self):
         return any(
             r.status in (Status.FAILED, Status.TIMEOUT) for r in self.results
@@ -71,6 +75,7 @@ class RunReport:
             "started_at": self.started_at,
             "completed_at": self.completed_at,
             "summary": self.summary,
+            "total_duration_seconds": self.total_duration_seconds,
             "results": [r.to_dict() for r in self.results],
         }
 

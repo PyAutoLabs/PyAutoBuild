@@ -3,16 +3,23 @@
 Run workspace scripts across one or more workspaces and produce summary reports.
 
 Usage:
-    python run_all.py                          # all 5 workspaces
+    python run_all.py                          # all 6 workspaces
     python run_all.py autolens                 # just autolens_workspace
     python run_all.py autolens_test autofit    # specific workspaces
 
-Reports are written to <autobuild>/test_results/ (per-workspace JSON + markdown)
-and an aggregated report.md is produced at the end.
+Reports default to <autobuild>/../test_results/runs/<UTC-timestamp>/ with a
+sibling `latest` symlink pointing at the most recent successful run, so every
+release-prep run is preserved. Pass --results-dir to override (CI uses this);
+in that mode the symlink is not touched.
+
+Per-script timeout defaults to 300s and can be overridden via --timeout-secs.
+This is forwarded to subprocesses via BUILD_SCRIPT_TIMEOUT.
 
 Each workspace also gets a test_report.md in its root for easy access.
 """
 
+import datetime
+import os
 import shutil
 import subprocess
 import sys
@@ -21,14 +28,32 @@ from pathlib import Path
 
 AUTOBUILD_DIR = Path(__file__).parent
 PYAUTOBASE = AUTOBUILD_DIR.parent.parent  # PyAutoLabs/
+RESULTS_BASE = AUTOBUILD_DIR.parent / "test_results"
 
 WORKSPACES = {
     "autofit": ("autofit_workspace", "autofit"),
     "autogalaxy": ("autogalaxy_workspace", "autogalaxy"),
     "autolens": ("autolens_workspace", "autolens"),
     "autofit_test": ("autofit_workspace_test", "autofit_test"),
+    "autogalaxy_test": ("autogalaxy_workspace_test", "autogalaxy_test"),
     "autolens_test": ("autolens_workspace_test", "autolens_test"),
 }
+
+DEFAULT_TIMEOUT_SECS = 300
+
+
+def utc_run_timestamp() -> str:
+    return datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H-%M-%SZ")
+
+
+def update_latest_symlink(run_dir: Path) -> None:
+    """Atomically point <RESULTS_BASE>/latest at run_dir."""
+    latest = RESULTS_BASE / "latest"
+    tmp = RESULTS_BASE / ".latest.tmp"
+    if tmp.exists() or tmp.is_symlink():
+        tmp.unlink()
+    tmp.symlink_to(run_dir.resolve(), target_is_directory=True)
+    os.replace(tmp, latest)
 
 # Local venv path — used when it exists, otherwise fall back to system python
 LOCAL_VENV_PYTHON = Path.home() / "venv" / "PyAuto" / "bin" / "python3"
@@ -41,7 +66,7 @@ def _resolve_python() -> str:
     return sys.executable
 
 
-def run_workspace(name, workspace_dir, project, results_dir, python):
+def run_workspace(name, workspace_dir, project, results_dir, python, timeout_secs):
     """Run all script directories for a single workspace."""
     scripts_dir = workspace_dir / "scripts"
     if not scripts_dir.exists():
@@ -54,19 +79,20 @@ def run_workspace(name, workspace_dir, project, results_dir, python):
     )
 
     # Ensure child processes (run_python.py -> build_util.py) use the same
-    # interpreter for running scripts.
-    import os
+    # interpreter and timeout for running scripts.
     env = os.environ.copy()
     env["BUILD_PYTHON_INTERPRETER"] = python
+    env["BUILD_SCRIPT_TIMEOUT"] = str(timeout_secs)
     env["PYTHONUNBUFFERED"] = "1"
 
     for directory in directories:
-        print(f"\n  Running {name} / scripts/{directory} ...")
+        rel_dir = f"scripts/{directory}"
+        print(f"\n  Running {name} / {rel_dir} ...")
         cmd = [
             python,
             str(AUTOBUILD_DIR / "run_python.py"),
             project,
-            directory,
+            rel_dir,
             "--report-dir", str(results_dir),
         ]
         subprocess.run(cmd, cwd=str(workspace_dir), env=env)
@@ -84,20 +110,41 @@ def main():
     parser.add_argument(
         "--results-dir",
         type=Path,
-        default=AUTOBUILD_DIR.parent / "test_results",
-        help="Directory for result files (default: PyAutoBuild/test_results/)",
+        default=None,
+        help=(
+            "Directory for result files (default: "
+            "PyAutoBuild/test_results/runs/<UTC-timestamp>/, with a "
+            "test_results/latest symlink updated on success)."
+        ),
+    )
+    parser.add_argument(
+        "--timeout-secs",
+        type=int,
+        default=DEFAULT_TIMEOUT_SECS,
+        help=(
+            f"Per-script timeout in seconds (default: {DEFAULT_TIMEOUT_SECS}). "
+            "Forwarded to subprocesses via BUILD_SCRIPT_TIMEOUT env var."
+        ),
     )
     args = parser.parse_args()
 
     workspaces = args.workspaces or list(WORKSPACES.keys())
     python = _resolve_python()
-    results_dir = args.results_dir.resolve()
-    if results_dir.exists():
-        shutil.rmtree(results_dir)
-    results_dir.mkdir(parents=True)
+    timeout_secs = args.timeout_secs
+
+    user_supplied_results_dir = args.results_dir is not None
+    if user_supplied_results_dir:
+        results_dir = args.results_dir.resolve()
+        if results_dir.exists():
+            shutil.rmtree(results_dir)
+        results_dir.mkdir(parents=True)
+    else:
+        results_dir = (RESULTS_BASE / "runs" / utc_run_timestamp()).resolve()
+        results_dir.mkdir(parents=True)
 
     print(f"Python: {python}")
     print(f"Results directory: {results_dir}")
+    print(f"Per-script timeout: {timeout_secs}s")
     print(f"Workspaces: {', '.join(workspaces)}")
 
     from slow_skip_check import (
@@ -128,7 +175,7 @@ def main():
         print(f"\n{'=' * 60}")
         print(f"  {ws_name}")
         print(f"{'=' * 60}")
-        run_workspace(ws_key, ws_dir, project, results_dir, python)
+        run_workspace(ws_key, ws_dir, project, results_dir, python, timeout_secs)
 
         # Copy per-workspace markdown summaries into the workspace root
         for md_file in results_dir.glob(f"{project}__*.md"):
@@ -180,6 +227,13 @@ def main():
         print(format_warning_banner(slow_skips, category="slow"))
     if needs_fix_skips:
         print(format_warning_banner(needs_fix_skips, category="needs_fix"))
+
+    if not user_supplied_results_dir:
+        try:
+            update_latest_symlink(results_dir)
+            print(f"\nlatest symlink → {results_dir}")
+        except OSError as exc:
+            print(f"\nCould not update latest symlink: {exc}", file=sys.stderr)
 
     sys.exit(1 if failures else 0)
 

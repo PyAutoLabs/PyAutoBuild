@@ -1,12 +1,7 @@
-autofit:
-- howtofit/chapter_1_introduction/gaussian.py
-- howtofit/chapter_1_introduction/profiles.py
-- howtofit/chapter_database/profiles.py
-autogalaxy:
-autolens:
-- imaging/advanced/chaining/hyper_mode/extensions.py
-autofit_test:
-autolens_test:
+# Fallback only — autofit / autogalaxy / autolens and the *_test workspaces
+# now own their own copy_files.yaml in config/build/. Remaining keys here
+# serve HowTo* and BSc_Galaxies_Project until those workspaces are migrated.
+
 howtogalaxy:
 howtolens:
 howtofit:

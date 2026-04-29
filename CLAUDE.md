@@ -105,12 +105,16 @@ All scripts in `autobuild/` are run from within a checked-out workspace director
 2. Scripts named `start_here.py`
 3. All other scripts
 
-### Config Files (`autobuild/config/`)
+### Config Files
 
-- **`no_run.yaml`** — Per-project lists of script/notebook stems to skip during execution
-- **`copy_files.yaml`** — Per-project lists of files to copy as-is to `notebooks/` instead of converting
-- **`visualise_notebooks.yaml`** — Per-project lists of notebooks to run when `--visualise` flag is used
-- **`notebooks_remove.yaml`** — Notebooks to remove
+Each workspace owns its own build config under `<workspace>/config/build/`:
+
+- **`no_run.yaml`** — flat list of script/notebook patterns to skip during execution
+- **`env_vars.yaml`** — defaults + per-pattern overrides for environment variables
+- **`copy_files.yaml`** — flat list of script paths to copy as-is to `notebooks/` instead of converting
+- **`visualise_notebooks.yaml`** — flat list of notebook stems to run when `--visualise` flag is used
+
+`autobuild/config/` retains keyed-dict copies of `no_run.yaml`, `copy_files.yaml`, and `visualise_notebooks.yaml` as fallbacks for legacy workspaces (HowTo*, BSc_Galaxies_Project) that have not been migrated yet. The 6 main workspaces (autofit/autogalaxy/autolens and their `_test` variants) own their own configs and do not consult these fallbacks.
 
 ### Environment Variables
 

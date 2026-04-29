@@ -9,7 +9,7 @@ import traceback
 from pathlib import Path
 from typing import List
 
-TIMEOUT_SECS = 60
+TIMEOUT_SECS = int(os.environ.get("BUILD_SCRIPT_TIMEOUT", "300"))
 BUILD_PATH = Path(__file__).parent
 
 BUILD_PYTHON_INTERPRETER = os.environ.get("BUILD_PYTHON_INTERPRETER", "python3")
