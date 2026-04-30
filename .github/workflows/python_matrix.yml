@@ -5,6 +5,17 @@ on:
   schedule:
     - cron: '0 3 * * 1'  # Monday 03:00 UTC, off-cycle from the daily release
 
+# Force local editable builds to outrank PyPI versions so pip's resolver
+# doesn't replace `pip install -e ./PyAutoConf` (1.0.dev0) with PyPI's
+# autoconf-2026.x during a downstream lib install. Without this, the
+# stale daily-release PyPI artifacts shadow the merged main code.
+env:
+  SETUPTOOLS_SCM_PRETEND_VERSION_FOR_AUTOCONF: "9999.0.0"
+  SETUPTOOLS_SCM_PRETEND_VERSION_FOR_AUTOARRAY: "9999.0.0"
+  SETUPTOOLS_SCM_PRETEND_VERSION_FOR_AUTOFIT: "9999.0.0"
+  SETUPTOOLS_SCM_PRETEND_VERSION_FOR_AUTOGALAXY: "9999.0.0"
+  SETUPTOOLS_SCM_PRETEND_VERSION_FOR_AUTOLENS: "9999.0.0"
+
 jobs:
   unit_tests:
     runs-on: ubuntu-latest
