@@ -235,7 +235,7 @@ jobs:
             workspace_repository: PyAutoLabs/HowToFit
     steps:
     - name: Skip check
-      if: "${{ github.event.inputs.skip_notebooks != 'true' }}"
+      if: "${{ github.event.inputs.skip_notebooks != 'true' && !endsWith(matrix.project.name, '_test') }}"
       id: should_run
       run: echo "run=true" >> $GITHUB_OUTPUT
     - uses: actions/checkout@v2
@@ -412,12 +412,12 @@ jobs:
             ${{ fromJSON(needs.find_scripts.outputs.matrix) }}
     steps:
     - name: Configure
-      if: "${{ github.event.inputs.skip_notebooks != 'true' }}"
+      if: "${{ github.event.inputs.skip_notebooks != 'true' && !endsWith(matrix.project.name, '_test') }}"
       id: configure
       run: |
         if [ ${{ matrix.project.name }} == "autofit" ]
         then
-            echo "::set-output name=repository::PyAutoLabs/PyAutoGalaxy"
+            echo "::set-output name=repository::PyAutoLabs/PyAutoFit"
             echo "::set-output name=workspace_repository::PyAutoLabs/autofit_workspace"
             echo "::set-output name=project::autofit"
         elif [ ${{ matrix.project.name }} == "autogalaxy" ]
@@ -448,42 +448,42 @@ jobs:
         fi
 
     - uses: actions/checkout@v2
-      if: "${{ github.event.inputs.skip_notebooks != 'true' }}"
+      if: "${{ github.event.inputs.skip_notebooks != 'true' && !endsWith(matrix.project.name, '_test') }}"
       with:
           path: PyAutoBuild
     - name: Checkout project
-      if: "${{ github.event.inputs.skip_notebooks != 'true' }}"
+      if: "${{ github.event.inputs.skip_notebooks != 'true' && !endsWith(matrix.project.name, '_test') }}"
       uses: actions/checkout@v2
       with:
         repository: "${{ steps.configure.outputs.repository }}"
         path: project
     - name: Checkout workspace
-      if: "${{ github.event.inputs.skip_notebooks != 'true' }}"
+      if: "${{ github.event.inputs.skip_notebooks != 'true' && !endsWith(matrix.project.name, '_test') }}"
       uses: actions/checkout@v2
       with:
         repository: ${{ steps.configure.outputs.workspace_repository }}
         ref: main
         path: workspace
     - name: Download pre-built notebooks
-      if: "${{ github.event.inputs.skip_notebooks != 'true' }}"
+      if: "${{ github.event.inputs.skip_notebooks != 'true' && !endsWith(matrix.project.name, '_test') }}"
       uses: actions/download-artifact@v4
       with:
         name: notebooks-${{ matrix.project.name }}
         path: workspace/notebooks/
     - name: Set up Python ${{ matrix.python-version }}
-      if: "${{ github.event.inputs.skip_notebooks != 'true' }}"
+      if: "${{ github.event.inputs.skip_notebooks != 'true' && !endsWith(matrix.project.name, '_test') }}"
       uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install optional requirements
-      if: "${{ github.event.inputs.skip_notebooks != 'true' }}"
+      if: "${{ github.event.inputs.skip_notebooks != 'true' && !endsWith(matrix.project.name, '_test') }}"
       run: |
         echo "Installing optional requirements"
         pip install matplotlib==3.6.0
         pip install pynufft==2025.1.1
         pip install numba
     - name: Install project
-      if: "${{ github.event.inputs.skip_notebooks != 'true' }}"
+      if: "${{ github.event.inputs.skip_notebooks != 'true' && !endsWith(matrix.project.name, '_test') }}"
       run: |
         python3 -m pip install \
           --index-url https://test.pypi.org/simple/ \
@@ -491,11 +491,11 @@ jobs:
           "autoconf==${{ needs.version_number.outputs.version_number }}" \
           "${{ steps.configure.outputs.project }}==${{ needs.version_number.outputs.version_number }}"
     - name: Install Jupyter dependency
-      if: "${{ github.event.inputs.skip_notebooks != 'true' }}"
+      if: "${{ github.event.inputs.skip_notebooks != 'true' && !endsWith(matrix.project.name, '_test') }}"
       run: |
         python3 -m pip install jupyter ipynb-py-convert
     - name: Run jupyter notebooks
-      if: "${{ github.event.inputs.skip_notebooks != 'true' }}"
+      if: "${{ github.event.inputs.skip_notebooks != 'true' && !endsWith(matrix.project.name, '_test') }}"
       run: |
         export PYTHONPATH=$PYTHONPATH:$(pwd)/PyAutoBuild
         AUTOBUILD_PATH="$(pwd)/PyAutoBuild/autobuild"
@@ -503,7 +503,7 @@ jobs:
         pushd workspace
         python3 "$AUTOBUILD_PATH/run.py" ${{ matrix.project.name }} "notebooks/${{ matrix.project.directory }}" --report-dir test-results
     - name: Upload notebook results
-      if: always()
+      if: ${{ always() && !endsWith(matrix.project.name, '_test') }}
       uses: actions/upload-artifact@v4
       with:
         name: results-notebooks-${{ matrix.project.name }}-${{ matrix.project.directory }}
