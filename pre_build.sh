@@ -15,6 +15,14 @@ PYAUTOBASE="/mnt/c/Users/Jammy/Code/PyAutoLabs"
 AUTOBUILD="$PYAUTOBASE/PyAutoBuild/autobuild"
 PYTHONPATH_EXTRA="$AUTOBUILD"
 
+# Ensure the canonical `pending-release` label exists with the right config
+# across every release-window repo. Idempotent — no-ops when nothing drifted.
+if command -v gh >/dev/null 2>&1; then
+    echo ""
+    echo "=== Ensuring pending-release labels ==="
+    bash "$PYAUTOBASE/admin_jammy/software/ensure_workspace_labels.sh"
+fi
+
 run_workspace() {
     local repo="$1"
     local project="$2"
@@ -59,6 +67,7 @@ run_workspace "autofit_workspace"                    "autofit"
 run_workspace "autogalaxy_workspace"                 "autogalaxy"
 run_workspace "autolens_workspace"                   "autolens"     true  true
 run_workspace "autofit_workspace_test"               "autofit"      false
+run_workspace "autogalaxy_workspace_test"            "autogalaxy"   false
 run_workspace "autolens_workspace_test"              "autolens"     false
 run_workspace "euclid_strong_lens_modeling_pipeline" ""             false
 run_workspace "HowToGalaxy"                          "howtogalaxy"
@@ -76,6 +85,13 @@ else
     git commit -m "pre build"
     git push
 fi
+
+# Block release if any workspace's version.txt is ahead of its installed
+# library — every welcome.py / start_here.py run would otherwise crash with
+# WorkspaceVersionMismatchError until the release dispatch landed.
+echo ""
+echo "=== Verifying workspace versions ==="
+bash "$PYAUTOBASE/PyAutoBuild/verify_workspace_versions.sh"
 
 # Trigger the GitHub Actions release workflow
 echo ""

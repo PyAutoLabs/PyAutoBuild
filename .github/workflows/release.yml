@@ -170,6 +170,11 @@ jobs:
           with:
             repository: PyAutoLabs/autofit_workspace_test
             path: autofit_test
+        - name: Checkout AutoGalaxy Test
+          uses: actions/checkout@v2
+          with:
+            repository: PyAutoLabs/autogalaxy_workspace_test
+            path: autogalaxy_test
         - name: Checkout AutoLens Test
           uses: actions/checkout@v2
           with:
@@ -196,7 +201,7 @@ jobs:
         - name: Make script matrix
           id: script_matrix
           run: |
-            matrix="$(./PyAutoBuild/autobuild/script_matrix.py autofit autogalaxy autolens autofit_test autolens_test howtogalaxy howtolens howtofit)"
+            matrix="$(./PyAutoBuild/autobuild/script_matrix.py autofit autogalaxy autolens autofit_test autogalaxy_test autolens_test howtogalaxy howtolens howtofit)"
             echo "::set-output name=matrix::$matrix"
 
   generate_notebooks:
@@ -312,6 +317,11 @@ jobs:
             echo "::set-output name=repository::PyAutoLabs/PyAutoFit"
             echo "::set-output name=workspace_repository::PyAutoLabs/autofit_workspace_test"
             echo "::set-output name=project::autofit"
+        elif [ ${{ matrix.project.name }} == "autogalaxy_test" ]
+        then
+            echo "::set-output name=repository::PyAutoLabs/PyAutoGalaxy"
+            echo "::set-output name=workspace_repository::PyAutoLabs/autogalaxy_workspace_test"
+            echo "::set-output name=project::autogalaxy"
         elif [ ${{ matrix.project.name }} == "howtogalaxy" ]
         then
             echo "::set-output name=repository::PyAutoLabs/PyAutoGalaxy"
