@@ -770,13 +770,33 @@ jobs:
         python3 "$AUTOBUILD_PATH/generate.py" ${{ matrix.workspace.name }}
         git add *.ipynb
         git commit -m "Release ${{ needs.version_number.outputs.version_number }}: update notebooks and version" || true
-    - name: Write workspace version.txt
+    - name: Write workspace version
       if: "${{ github.event.inputs.skip_release != 'true' }}"
       run: |
         VERSION="${{ needs.version_number.outputs.version_number }}"
         pushd workspace
         echo "$VERSION" > version.txt
-        git add version.txt
+        python3 - "$VERSION" <<'PY'
+        import re, sys, pathlib
+        version = sys.argv[1]
+        path = pathlib.Path("config/general.yaml")
+        if not path.exists():
+            sys.exit(0)
+        text = path.read_text()
+        line_re = re.compile(r"^(?P<indent>\s*)workspace_version:\s*.*$", re.MULTILINE)
+        if line_re.search(text):
+            text = line_re.sub(lambda m: f"{m.group('indent')}workspace_version: {version}", text)
+        else:
+            block_re = re.compile(r"^version:\s*\n", re.MULTILINE)
+            if block_re.search(text):
+                text = block_re.sub(f"version:\n  workspace_version: {version}\n", text, count=1)
+            else:
+                if not text.endswith("\n"):
+                    text += "\n"
+                text += f"version:\n  workspace_version: {version}\n"
+        path.write_text(text)
+        PY
+        git add version.txt config/general.yaml 2>/dev/null || git add version.txt
         git commit -m "Release $VERSION: pin workspace version" || true
     - name: Bump Colab URL tag refs
       if: "${{ github.event.inputs.skip_release != 'true' && matrix.workspace.bump_colab_urls == true }}"
