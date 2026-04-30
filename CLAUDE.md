@@ -12,13 +12,26 @@ PyAutoBuild is a CI/CD build server for the PyAuto software family (PyAutoConf, 
 
 The pipeline is triggered via GitHub Actions (`release.yml`) and is manually dispatched with configurable options.
 
+## Bash CLI
+
+Every operation in this repo is invokable from the shell via the `autobuild` dispatcher at `bin/autobuild`. List subcommands with `autobuild help`; print the docstring for one with `autobuild help <subcommand>` (or `autobuild <subcommand> --help`).
+
+Recommended alias for `~/.bashrc`:
+
+```bash
+alias autobuild-help='$HOME/Code/PyAutoLabs/PyAutoBuild/bin/autobuild help'
+```
+
+The dispatcher routes to the underlying bash script directly, or to the Python tool with `PYTHONPATH` already set so the internal `build_util` / `result_collector` / `env_config` imports resolve. The same operations remain callable as Claude skills (`/pre_build`, `/verify_install`, `/review_release`); use the skill when you want the validation + summary wrapper, the CLI when you just want to fire the underlying tool.
+
 ## Pre-Build Steps
 
 Before triggering a build, run:
 
 ```bash
-bash /mnt/c/Users/Jammy/Code/PyAutoLabs/PyAutoBuild/pre_build.sh [minor_version]
+bash $HOME/Code/PyAutoLabs/PyAutoBuild/bin/autobuild pre_build [minor_version]
 # minor_version defaults to 1
+# (equivalent to: bash $HOME/Code/PyAutoLabs/PyAutoBuild/pre_build.sh [minor_version])
 ```
 
 This script does the following for each repo:
@@ -91,7 +104,7 @@ All scripts in `autobuild/` are run from within a checked-out workspace director
 - **`run.py <project> <directory> [--visualise]`** — Executes Jupyter notebooks in a workspace folder, skipping files in `config/no_run.yaml`
 - **`generate.py <project>`** — Converts Python scripts in `scripts/` to `.ipynb` notebooks in `notebooks/`, run from within the workspace root
 - **`script_matrix.py <project1> [project2 ...]`** — Outputs a JSON matrix of `{name, directory}` pairs for GitHub Actions matrix strategy
-- **`tag_and_merge.py --version <version>`** — Tags library repos for release
+- **`tag_and_merge.sh --version <version>`** — Commits pending changes and tags library repos (PyAutoConf, PyAutoFit, PyAutoArray, PyAutoGalaxy, PyAutoLens) for release
 - **`url_check.sh [directory]`** — Fails if any forbidden Binder/Colab URL pattern appears in `*.rst`, `*.md`, `*.ipynb`, or `*.py` under the directory. Forbidden: any `mybinder.org` URL, Colab URLs with `Jammy2211/` owner, and Colab URLs pinned to `/blob/release/`. Each affected workspace and library repo runs this in CI to prevent regressions.
 - **`bump_colab_urls.sh <new-tag>`** — Rewrites every `colab.research.google.com/github/PyAutoLabs/<repo>/blob/<old-tag>/...` URL in cwd to use `<new-tag>`, where `<repo>` is one of `autofit_workspace`, `autogalaxy_workspace`, `autolens_workspace`, `HowToGalaxy`, `HowToLens`. Called by the `release_workspaces` and `bump_library_colab_urls` jobs in `release.yml` so README/docs Colab links always pin to the just-released tag. Idempotent; skips URLs not in canonical PyAutoLabs/date-tagged form.
 

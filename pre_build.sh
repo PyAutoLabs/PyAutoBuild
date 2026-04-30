@@ -15,6 +15,10 @@ PYAUTOBASE="/mnt/c/Users/Jammy/Code/PyAutoLabs"
 AUTOBUILD="$PYAUTOBASE/PyAutoBuild/autobuild"
 PYTHONPATH_EXTRA="$AUTOBUILD"
 
+# YYYY.M.D.<minor> — used to bump README version pins. %-m / %-d strip
+# leading zeroes so the tag matches the canonical pattern (e.g. 2026.4.5.1).
+VERSION="$(date +%Y.%-m.%-d).$MINOR_VERSION"
+
 # Ensure the canonical `pending-release` label exists with the right config
 # across every release-window repo. Idempotent — no-ops when nothing drifted.
 if command -v gh >/dev/null 2>&1; then
@@ -28,6 +32,7 @@ run_workspace() {
     local project="$2"
     local generate="${3:-true}"
     local slam="${4:-false}"
+    local readme_pkg="${5:-}"
     local dir="$PYAUTOBASE/$repo"
 
     echo ""
@@ -37,6 +42,12 @@ run_workspace() {
 
     echo "  Running black..."
     black .
+
+    if [ -n "$readme_pkg" ]; then
+        echo "  Bumping README version → $readme_pkg v$VERSION..."
+        sed -i "s/$readme_pkg v[0-9]\{4\}\.[0-9]*\.[0-9]*\.[0-9]*/$readme_pkg v$VERSION/g" \
+            README.rst README.md 2>/dev/null || true
+    fi
 
     if [ "$generate" = "true" ]; then
         echo "  Running generate.py ($project)..."
@@ -63,16 +74,19 @@ run_workspace() {
     fi
 }
 
-run_workspace "autofit_workspace"                    "autofit"
-run_workspace "autogalaxy_workspace"                 "autogalaxy"
-run_workspace "autolens_workspace"                   "autolens"     true  true
-run_workspace "autofit_workspace_test"               "autofit"      false
-run_workspace "autogalaxy_workspace_test"            "autogalaxy"   false
-run_workspace "autolens_workspace_test"              "autolens"     false
-run_workspace "euclid_strong_lens_modeling_pipeline" ""             false
-run_workspace "HowToGalaxy"                          "howtogalaxy"
-run_workspace "HowToLens"                            "howtolens"
-run_workspace "HowToFit"                             "howtofit"
+# Positional args: repo project [generate=true] [slam=false] [readme_pkg=""]
+# readme_pkg: when non-empty, the README's "<pkg> vYYYY.M.D.B" pin is bumped to
+# the new VERSION. Empty for workspaces with no README version pin.
+run_workspace "autofit_workspace"                    "autofit"      true   false  PyAutoFit
+run_workspace "autogalaxy_workspace"                 "autogalaxy"   true   false  PyAutoGalaxy
+run_workspace "autolens_workspace"                   "autolens"     true   true   PyAutoLens
+run_workspace "autofit_workspace_test"               "autofit"      false  false  PyAutoFit
+run_workspace "autogalaxy_workspace_test"            "autogalaxy"   false  false  PyAutoGalaxy
+run_workspace "autolens_workspace_test"              "autolens"     false  false  PyAutoLens
+run_workspace "euclid_strong_lens_modeling_pipeline" ""             false  false  ""
+run_workspace "HowToGalaxy"                          "howtogalaxy"  true   false  PyAutoGalaxy
+run_workspace "HowToLens"                            "howtolens"    true   false  PyAutoLens
+run_workspace "HowToFit"                             "howtofit"     true   false  PyAutoFit
 
 # Commit and push PyAutoBuild itself
 echo ""
