@@ -1,0 +1,451 @@
+#!/usr/bin/env bash
+# autobuild — unified bash CLI for PyAutoBuild operations.
+#
+# Run `autobuild help` for the list of subcommands.
+# Run `autobuild help <subcommand>` for full details on one subcommand.
+#
+# Recommended alias for ~/.bashrc:
+#   alias autobuild-help='$HOME/Code/PyAutoLabs/PyAutoBuild/bin/autobuild help'
+
+set -u
+
+SELF="$(readlink -f "$0")"
+REPO="$(cd "$(dirname "$SELF")/.." && pwd)"
+PYAUTOBASE="$(cd "$REPO/.." && pwd)"
+AUTOBUILD_DIR="$REPO/autobuild"
+ADMIN_JAMMY="$PYAUTOBASE/admin_jammy"
+
+# ----- subcommand registration -----
+#
+# SUBCOMMAND_ORDER drives the layout of `autobuild help`. Entries beginning
+# with "# " are rendered as section headers; everything else is a real
+# subcommand and must have a matching SHORT_DESC entry plus cmd_<name> and
+# help_<name> functions.
+
+SUBCOMMAND_ORDER=(
+  "# Build and release pipeline"
+  pre_build
+  verify_workspace_versions
+  "# Release validation"
+  verify_install
+  url_check
+  bump_colab_urls
+  "# Workspace operations (run from a workspace root)"
+  generate
+  run
+  run_python
+  run_all
+  "# Release support"
+  script_matrix
+  aggregate_results
+  slow_skip_check
+  generate_release_notes
+  create_analysis_issue
+  tag_and_merge
+  "# Meta"
+  help
+)
+
+declare -A SHORT_DESC=(
+  [pre_build]="Format, generate, push workspaces, then dispatch release.yml"
+  [verify_workspace_versions]="Block release if any workspace version.txt is ahead of its installed library"
+  [verify_install]="Release-readiness gate: pip & conda install-path checks for PyAutoLens"
+  [url_check]="Fail if forbidden Binder/Colab URL patterns appear in docs"
+  [bump_colab_urls]="Rewrite Colab URLs in cwd from old date-tag to new date-tag"
+  [generate]="Convert workspace scripts/ to notebooks/ (run from a workspace root)"
+  [run]="Execute notebooks in a workspace folder"
+  [run_python]="Execute Python scripts in a workspace folder"
+  [run_all]="Run scripts across one or more workspaces and produce summary reports"
+  [script_matrix]="Output a JSON matrix of {name, directory} for GitHub Actions"
+  [aggregate_results]="Aggregate per-job JSON results into a release-readiness report"
+  [slow_skip_check]="Surface SLOW / NEEDS_FIX entries in workspace no_run.yaml files"
+  [generate_release_notes]="Generate release notes from merged PRs and create GitHub Releases"
+  [create_analysis_issue]="Open a GitHub issue with the release report and assign Copilot"
+  [tag_and_merge]="Commit and tag every library repo for a release"
+  [help]="List subcommands or show details for one"
+)
+
+# _python_in_autobuild <script> [args...]
+# Run a Python tool from autobuild/ with PYTHONPATH set so its sibling
+# modules (build_util, generate_autofit, env_config, result_collector)
+# resolve correctly. Inherits the user's cwd unchanged — several tools
+# (run.py, run_python.py, generate.py) read config from cwd.
+_python_in_autobuild() {
+  local script="$1"
+  shift
+  PYTHONPATH="$AUTOBUILD_DIR${PYTHONPATH:+:$PYTHONPATH}" \
+    python "$AUTOBUILD_DIR/$script" "$@"
+}
+
+# ----- Build and release pipeline -----
+
+help_pre_build() {
+  cat <<'EOF'
+autobuild pre_build [minor_version] [skip_release]
+
+Run black + generate notebooks + commit & push for every workspace repo,
+then commit & push PyAutoBuild itself, then dispatch the GitHub Actions
+release.yml workflow.
+
+For each workspace with a README package mapping (PyAutoFit / PyAutoGalaxy
+/ PyAutoLens), the README is also bumped to the new release version
+(YYYY.M.D.<minor>) before commit.
+
+Arguments:
+  minor_version  Minor version suffix appended to YYYY.M.D (default: 1)
+  skip_release   "true" to skip the release stage (default: false)
+
+This is the bash entry point that the /pre_build Claude skill wraps.
+EOF
+}
+cmd_pre_build() {
+  bash "$REPO/pre_build.sh" "$@"
+}
+
+help_verify_workspace_versions() {
+  cat <<'EOF'
+autobuild verify_workspace_versions
+
+Fail-fast check: aborts release if any workspace version.txt is ahead
+of the currently-installed library version. Used by pre_build before
+dispatching the release workflow to guard against bootstrap commits
+that set an aspirational version.txt.
+EOF
+}
+cmd_verify_workspace_versions() {
+  bash "$REPO/verify_workspace_versions.sh" "$@"
+}
+
+# ----- Release validation -----
+
+help_verify_install() {
+  cat <<'EOF'
+autobuild verify_install [CHECKS...] [--version VERSION] [--keep]
+
+Release-readiness gate for PyAutoLens. Runs a suite of independent
+install-path checks (pip & conda) in throwaway venvs and reports a
+per-check PASS / FAIL / SKIP table.
+
+Checks:
+  A   pip install autolens (default python3) + start_here.py + welcome.py
+  B   pip install autolens correctly REJECTED on python3.9 / python3.11
+  C   conda install flow (python=3.12) + start_here.py + welcome.py
+  D   pip install "autolens[optional]" resolves and imports
+  E   pip install autolens==2025.10.6.1 (yanked) installs by explicit pin
+
+Options:
+  --version VERSION   Pin a specific PyPI version (applies to A, C, D)
+  --keep              Don't clean up venvs / conda envs / clones at the end
+
+Default: run all checks. Source of truth lives at
+admin_jammy/skills/verify_install/verify_install.sh.
+EOF
+}
+cmd_verify_install() {
+  bash "$ADMIN_JAMMY/skills/verify_install/verify_install.sh" "$@"
+}
+
+help_url_check() {
+  cat <<'EOF'
+autobuild url_check [directory]
+
+Scan rst/md/ipynb/py files under <directory> (default: cwd) and exit
+non-zero if any forbidden URL pattern is present:
+
+  1. mybinder.org URLs (Binder is no longer supported — use Colab)
+  2. Colab URLs with Jammy2211 owner (workspaces now live under PyAutoLabs)
+  3. Colab URLs pinned to /blob/release/ (the release branch is gone — use a tag)
+
+Each affected workspace and library repo runs this in CI to prevent regressions.
+EOF
+}
+cmd_url_check() {
+  bash "$AUTOBUILD_DIR/url_check.sh" "$@"
+}
+
+help_bump_colab_urls() {
+  cat <<'EOF'
+autobuild bump_colab_urls <new-tag>
+
+Rewrite every URL of the form
+  colab.research.google.com/github/PyAutoLabs/<repo>/blob/<old-tag>/...
+to use <new-tag>, in-place across *.rst, *.md, *.ipynb, *.py under cwd.
+
+<repo> must be one of: autofit_workspace, autogalaxy_workspace,
+autolens_workspace, HowToGalaxy, HowToLens, HowToFit.
+<new-tag> must look like YYYY.M.D.B. Idempotent.
+
+Called by the release.yml `release_workspaces` and `bump_library_colab_urls`
+jobs so README/docs Colab links always pin to the just-released tag.
+EOF
+}
+cmd_bump_colab_urls() {
+  bash "$AUTOBUILD_DIR/bump_colab_urls.sh" "$@"
+}
+
+# ----- Workspace operations -----
+
+help_generate() {
+  cat <<'EOF'
+autobuild generate <project> [--report-dir DIR]
+
+Convert every script in scripts/ to a Jupyter notebook in notebooks/, run
+from inside the workspace root. The <project> argument selects which
+keyed config block to read from copy_files.yaml when the workspace has
+not yet migrated to its own config/build/copy_files.yaml flat-list form.
+
+Arguments:
+  project        Project name (e.g. autofit, autogalaxy, autolens, howtolens)
+  --report-dir   Directory to write structured JSON generation results to
+
+Run from the workspace root, not from PyAutoBuild.
+EOF
+}
+cmd_generate() {
+  _python_in_autobuild generate.py "$@"
+}
+
+help_run() {
+  cat <<'EOF'
+autobuild run <project> <directory> [--visualise] [--report-dir DIR] [--env-config FILE]
+
+Execute Jupyter notebooks in <directory> for <project>, skipping files
+listed in config/build/no_run.yaml (or autobuild/config/no_run.yaml as
+fallback).
+
+Arguments:
+  project        Project name (e.g. autofit, autogalaxy, autolens)
+  directory      Subdirectory of notebooks/ to execute
+  --visualise    Only run notebooks listed in visualise_notebooks.yaml
+  --report-dir   Directory to write structured JSON results to
+  --env-config   Path to env_vars.yaml for per-script environment config
+
+Run from the workspace root.
+EOF
+}
+cmd_run() {
+  _python_in_autobuild run.py "$@"
+}
+
+help_run_python() {
+  cat <<'EOF'
+autobuild run_python <project> <directory> [--report-dir DIR] [--env-config FILE]
+
+Execute Python scripts in <directory> for <project>, skipping files
+listed in config/build/no_run.yaml.
+
+Arguments:
+  project        Project name (e.g. autofit, autogalaxy, autolens)
+  directory      Subdirectory of scripts/ to execute
+  --report-dir   Directory to write structured JSON results to
+  --env-config   Path to env_vars.yaml for per-script environment config
+
+Run from the workspace root.
+EOF
+}
+cmd_run_python() {
+  _python_in_autobuild run_python.py "$@"
+}
+
+help_run_all() {
+  cat <<'EOF'
+autobuild run_all [WORKSPACE...] [--results-dir DIR] [--timeout-secs N]
+
+Run workspace scripts across one or more workspaces and produce summary
+reports.
+
+Arguments (positional):
+  autofit | autogalaxy | autolens | autofit_test | autogalaxy_test | autolens_test
+  (default: all six)
+
+Options:
+  --results-dir    Override default output dir (default:
+                   PyAutoBuild/test_results/runs/<UTC-timestamp>/, with a
+                   sibling `latest` symlink)
+  --timeout-secs   Per-script timeout in seconds (default: 300)
+
+Each workspace also gets a test_report.md in its root for easy access.
+EOF
+}
+cmd_run_all() {
+  _python_in_autobuild run_all.py "$@"
+}
+
+# ----- Release support -----
+
+help_script_matrix() {
+  cat <<'EOF'
+autobuild script_matrix <project...>
+
+Print a JSON matrix of {name, directory} pairs for GitHub Actions matrix
+strategy. <project> arguments are workspace names whose scripts/ directory
+will be enumerated.
+
+Used by release.yml to dynamically generate the run_scripts and
+run_notebooks job matrices.
+EOF
+}
+cmd_script_matrix() {
+  _python_in_autobuild script_matrix.py "$@"
+}
+
+help_aggregate_results() {
+  cat <<'EOF'
+autobuild aggregate_results <results-dir> [--output JSON] [--markdown MD]
+
+Aggregate per-job JSON result files from <results-dir> into a consolidated
+release readiness report.
+
+Arguments:
+  results-dir    Directory containing per-job *.json result files
+  --output       Path to write the aggregated JSON report
+  --markdown     Path to write a human-readable markdown summary
+
+Used by the analyze_results job in release.yml.
+EOF
+}
+cmd_aggregate_results() {
+  _python_in_autobuild aggregate_results.py "$@"
+}
+
+help_slow_skip_check() {
+  cat <<'EOF'
+autobuild slow_skip_check [WORKSPACE_PATH...]
+
+Scan workspace no_run.yaml files for entries tagged as SLOW-skips or
+NEEDS_FIX-skips and surface them so they cannot be silently forgotten.
+
+Defaults to scanning the six main workspaces under PyAutoLabs:
+  autofit_workspace, autogalaxy_workspace, autolens_workspace,
+  autofit_workspace_test, autolens_workspace_test.
+
+Output is a warning banner suitable for printing in CI logs.
+EOF
+}
+cmd_slow_skip_check() {
+  _python_in_autobuild slow_skip_check.py "$@"
+}
+
+help_generate_release_notes() {
+  cat <<'EOF'
+autobuild generate_release_notes --version <VERSION> --repo <OWNER/REPO> [--dry-run]
+
+Generate release notes from merged PRs and create GitHub Releases. For
+downstream repos (PyAutoGalaxy, PyAutoLens), notes include upstream
+changes from dependency repos.
+
+Arguments:
+  --version  Release version (e.g. 2026.4.20.1)
+  --repo     Repository in OWNER/REPO form (e.g. PyAutoLabs/PyAutoLens)
+  --dry-run  Print the release notes without creating the release
+EOF
+}
+cmd_generate_release_notes() {
+  _python_in_autobuild generate_release_notes.py "$@"
+}
+
+help_create_analysis_issue() {
+  cat <<'EOF'
+autobuild create_analysis_issue <report.json> --run-id <ID> [--repo <OWNER/REPO>] [--dry-run]
+
+Create a GitHub Issue with the release readiness report and assign
+Copilot for analysis.
+
+Arguments:
+  report.json   Path to the aggregated JSON report from aggregate_results
+  --run-id      Workflow run ID to link in the issue body
+  --repo        Repository in OWNER/REPO form (default inferred)
+  --dry-run     Print the issue body without creating the issue
+EOF
+}
+cmd_create_analysis_issue() {
+  _python_in_autobuild create_analysis_issue.py "$@"
+}
+
+help_tag_and_merge() {
+  cat <<'EOF'
+autobuild tag_and_merge --version <VERSION>
+
+Commit any pending changes and tag HEAD as v<VERSION> in every library
+repo: PyAutoConf, PyAutoFit, PyAutoArray, PyAutoGalaxy, PyAutoLens.
+
+Each repo gets a commit with message "Update version to <VERSION>" and
+a tag named "v<VERSION>". Stops on the first failing repo.
+EOF
+}
+cmd_tag_and_merge() {
+  bash "$AUTOBUILD_DIR/tag_and_merge.sh" "$@"
+}
+
+# ----- Meta -----
+
+help_help() {
+  cat <<'EOF'
+autobuild help [subcommand]
+
+With no argument, list every subcommand with a one-line description.
+With a subcommand, print the full docstring for that subcommand.
+EOF
+}
+cmd_help() {
+  if [ $# -eq 0 ]; then
+    cat <<'EOF'
+autobuild — unified CLI for PyAutoBuild operations.
+
+Usage: autobuild <subcommand> [args...]
+       autobuild help [subcommand]
+       autobuild <subcommand> --help
+
+Subcommands:
+EOF
+    local entry
+    for entry in "${SUBCOMMAND_ORDER[@]}"; do
+      if [[ "$entry" == "#"* ]]; then
+        printf '\n  %s\n' "${entry#\# }"
+      else
+        printf '    %-28s %s\n' "$entry" "${SHORT_DESC[$entry]:-}"
+      fi
+    done
+    cat <<'EOF'
+
+Run `autobuild help <subcommand>` to see full documentation.
+EOF
+    return 0
+  fi
+
+  local name="$1"
+  if ! declare -f "help_$name" > /dev/null; then
+    echo "autobuild: unknown subcommand '$name'" >&2
+    echo "Run 'autobuild help' for the list of subcommands." >&2
+    return 2
+  fi
+  "help_$name"
+}
+
+# ----- dispatcher -----
+
+main() {
+  local sub="${1:-}"
+  case "$sub" in
+    ""|-h|--help|help)
+      shift 2>/dev/null || true
+      cmd_help "$@"
+      return $?
+      ;;
+  esac
+  shift
+  if ! declare -f "cmd_$sub" > /dev/null; then
+    echo "autobuild: unknown subcommand '$sub'" >&2
+    echo "Run 'autobuild help' for the list of subcommands." >&2
+    return 2
+  fi
+  case "${1:-}" in
+    -h|--help)
+      "help_$sub"
+      return 0
+      ;;
+  esac
+  "cmd_$sub" "$@"
+}
+
+main "$@"

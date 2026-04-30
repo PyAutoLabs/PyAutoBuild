@@ -32,3 +32,21 @@ The build pipeline includes the following tasks:
 - Update workspaces with new test scripts.
 
 This automatically runs every 24 hours.
+
+CLI Usage
+---------
+
+Every operation is invokable from the shell via the ``autobuild`` dispatcher::
+
+    bash bin/autobuild help                    # list every subcommand
+    bash bin/autobuild help <subcommand>       # full docstring for one
+    bash bin/autobuild pre_build [minor]       # full pre-build flow
+    bash bin/autobuild verify_install          # release-readiness gate
+
+Recommended alias for ``~/.bashrc``::
+
+    alias autobuild-help='$HOME/Code/PyAutoLabs/PyAutoBuild/bin/autobuild help'
+
+The dispatcher wraps both bash scripts and Python tools, so any operation in
+this repo is reachable from a single entry point with consistent ``--help``
+documentation.
