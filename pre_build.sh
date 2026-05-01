@@ -17,7 +17,11 @@ MINOR_VERSION="${1:-1}"
 SKIP_RELEASE="${2:-false}"
 SKIP_SCRIPTS="${SKIP_SCRIPTS:-}"
 SKIP_NOTEBOOKS="${SKIP_NOTEBOOKS:-}"
-PYAUTOBASE="/mnt/c/Users/Jammy/Code/PyAutoLabs"
+
+# Resolve PYAUTOBASE from this script's location (same idiom as bin/autobuild)
+# so pre_build.sh works from any checkout — Linux, WSL, anywhere.
+SELF="$(readlink -f "$0")"
+PYAUTOBASE="$(cd "$(dirname "$SELF")/.." && pwd)"
 AUTOBUILD="$PYAUTOBASE/PyAutoBuild/autobuild"
 PYTHONPATH_EXTRA="$AUTOBUILD"
 
