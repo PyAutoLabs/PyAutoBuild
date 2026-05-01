@@ -22,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13', '3.14']
+        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
         project:
           - { name: PyAutoConf,   tests: test_autoconf }
           - { name: PyAutoArray,  tests: test_autoarray }
@@ -76,7 +76,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13', '3.14']
+        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
         workspace:
           - { repo: PyAutoLabs/autofit_workspace,    path: autofit_workspace }
           - { repo: PyAutoLabs/autogalaxy_workspace, path: autogalaxy_workspace }
