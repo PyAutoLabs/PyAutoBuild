@@ -6,11 +6,17 @@
 # Usage: bash pre_build.sh [minor_version] [skip_release]
 #   minor_version  Minor version suffix (default: 1)
 #   skip_release   Whether to skip the release stage, true or false (default: false)
+#
+# Optional env vars (forwarded as workflow_dispatch inputs when set):
+#   SKIP_SCRIPTS    true|false — skip run_scripts matrix in release.yml
+#   SKIP_NOTEBOOKS  true|false — skip run_notebooks matrix in release.yml
 
 set -e
 
 MINOR_VERSION="${1:-1}"
 SKIP_RELEASE="${2:-false}"
+SKIP_SCRIPTS="${SKIP_SCRIPTS:-}"
+SKIP_NOTEBOOKS="${SKIP_NOTEBOOKS:-}"
 PYAUTOBASE="/mnt/c/Users/Jammy/Code/PyAutoLabs"
 AUTOBUILD="$PYAUTOBASE/PyAutoBuild/autobuild"
 PYTHONPATH_EXTRA="$AUTOBUILD"
@@ -110,10 +116,18 @@ bash "$PYAUTOBASE/PyAutoBuild/verify_workspace_versions.sh"
 # Trigger the GitHub Actions release workflow
 echo ""
 echo "=== Triggering release workflow (minor_version=$MINOR_VERSION) ==="
+EXTRA_FIELDS=()
+if [ -n "$SKIP_SCRIPTS" ]; then
+    EXTRA_FIELDS+=(--field "skip_scripts=$SKIP_SCRIPTS")
+fi
+if [ -n "$SKIP_NOTEBOOKS" ]; then
+    EXTRA_FIELDS+=(--field "skip_notebooks=$SKIP_NOTEBOOKS")
+fi
 gh workflow run release.yml \
     --repo PyAutoLabs/PyAutoBuild \
     --field minor_version="$MINOR_VERSION" \
-    --field skip_release="$SKIP_RELEASE"
+    --field skip_release="$SKIP_RELEASE" \
+    "${EXTRA_FIELDS[@]}"
 
 echo ""
 echo "Pre-build complete. Workflow dispatched."
