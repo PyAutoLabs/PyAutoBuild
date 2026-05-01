@@ -747,13 +747,11 @@ jobs:
             package: PyAutoFit
             generate_notebooks: true
             bump_colab_urls: true
-          # NOTE: Jammy2211/euclid_strong_lens_modeling_pipeline removed from
-          # release_workspaces matrix because PAT_PYAUTOLABS does not have
-          # write access to repos in the Jammy2211/ user namespace. To
-          # re-enable, add a PAT_JAMMY repo secret with contents:write on
-          # the euclid repo and re-add the matrix entry with `pat: PAT_JAMMY`
-          # following the per-matrix pat pattern used in the `release` job
-          # (lines 575–597). Until then, tag euclid manually on releases.
+          - repository: PyAutoLabs/euclid_strong_lens_modeling_pipeline
+            name: euclid_pipeline
+            package: PyAutoLens
+            generate_notebooks: false
+            bump_colab_urls: false
     steps:
     - uses: actions/checkout@v2
       if: "${{ github.event.inputs.skip_release != 'true' }}"
