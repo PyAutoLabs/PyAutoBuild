@@ -65,7 +65,7 @@ run_workspace() {
     fi
 
     echo "  Staging safe directories..."
-    git add -f dataset/
+    [ -d dataset ] && git add -f dataset/
     for d in config notebooks scripts; do
         [ -d "$d" ] && git add "$d/"
     done
