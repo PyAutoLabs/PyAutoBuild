@@ -105,15 +105,21 @@ jobs:
             export PACKAGES=("autoconf" "autoarray" "autofit" "autogalaxy" "autolens")
             export VERSION="${{ needs.version_number.outputs.version_number }}"
 
-            # Wait for each package to become available on test PyPI
+            # Wait for each package to become available on test PyPI.
+            # 300 attempts × 10s = 50min buffer. Each release_test_pypi matrix
+            # job uploads its own lib then waits for ALL 5 to be visible on the
+            # simple index, so the wait must absorb the slowest sibling build —
+            # on slow CI days the previous 100 × 10s = 17min budget timed out
+            # waiting for siblings that hadn't finished uploading yet, which
+            # then cascade-cancelled the rest of the matrix.
             for PACKAGE in ${PACKAGES[@]}; do
               echo "Checking for $PACKAGE==$VERSION on test PyPI..."
               cnt=0
               until python3 -m pip download --no-deps --dest /tmp/pyauto-check \
                     --index-url https://test.pypi.org/simple/ "$PACKAGE==$VERSION" 2>/dev/null; do
                 ((cnt=cnt+1))
-                if [[ $cnt -ge 100 ]]; then
-                  echo "ERROR: Timed out waiting for $PACKAGE==$VERSION after 100 attempts"
+                if [[ $cnt -ge 300 ]]; then
+                  echo "ERROR: Timed out waiting for $PACKAGE==$VERSION after 300 attempts (50min)"
                   exit 1
                 fi
                 echo "  Waiting for $PACKAGE==$VERSION... (attempt $cnt)"
