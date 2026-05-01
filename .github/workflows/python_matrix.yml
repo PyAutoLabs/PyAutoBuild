@@ -44,25 +44,24 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           allow-prereleases: true
-      - name: Install libraries (in dependency order)
+      - name: Install libraries (single combined install — all 5 local)
         run: |
           python -m pip install --upgrade pip wheel
-          # Pass 1: install with deps to pull in all external deps (numpy, scipy,
-          # astropy, anesthetic, jax, etc.). Pip's resolver may swap our editable
-          # libs for stale PyPI versions during this pass — that's fine, Pass 2
-          # puts them back.
-          pip install -e "./PyAutoLens[optional]"
+          # Pass all 5 libs in ONE pip invocation so the resolver knows about
+          # every local checkout upfront. Without this, transitive deps
+          # (e.g. autogalaxy as a dep of autolens) get resolved from PyPI,
+          # and pip backtracks through the entire PyPI release history of
+          # autogalaxy looking for one whose nautilus-sampler pin matches
+          # the local autolens — which never matches because PyPI is stale.
+          pip install \
+            -e ./PyAutoConf \
+            -e ./PyAutoArray \
+            -e ./PyAutoFit \
+            -e ./PyAutoGalaxy \
+            -e "./PyAutoLens[optional]"
           pip install pytest pytest-cov
-          # Pass 2: force-reinstall our 5 libs --no-deps so the editable local
-          # versions are what gets imported (overrides any PyPI versions pip
-          # swapped in during Pass 1).
-          pip install --no-deps --force-reinstall -e ./PyAutoConf
-          pip install --no-deps --force-reinstall -e ./PyAutoArray
-          pip install --no-deps --force-reinstall -e ./PyAutoFit
-          pip install --no-deps --force-reinstall -e ./PyAutoGalaxy
-          pip install --no-deps --force-reinstall -e ./PyAutoLens
           # Show final installed versions for diagnosis
-          pip list | grep -iE "^(autoconf|autoarray|autofit|autogalaxy|autolens|jax|numpy|scipy)"
+          pip list | grep -iE "^(autoconf|autoarray|autofit|autogalaxy|autolens|jax|numpy|scipy|nautilus)"
       - name: Run tests
         env:
           NUMBA_CACHE_DIR: /tmp/numba_cache
@@ -105,19 +104,17 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           allow-prereleases: true
-      - name: Install libraries (in dependency order)
+      - name: Install libraries (single combined install — all 5 local)
         run: |
           python -m pip install --upgrade pip wheel
-          # Pass 1: install with deps via [optional] extra (pulls jax, numba, etc).
-          pip install -e "./PyAutoLens[optional]"
-          # Pass 2: force-reinstall our 5 libs --no-deps so editable local code wins.
-          pip install --no-deps --force-reinstall -e ./PyAutoConf
-          pip install --no-deps --force-reinstall -e ./PyAutoArray
-          pip install --no-deps --force-reinstall -e ./PyAutoFit
-          pip install --no-deps --force-reinstall -e ./PyAutoGalaxy
-          pip install --no-deps --force-reinstall -e ./PyAutoLens
+          pip install \
+            -e ./PyAutoConf \
+            -e ./PyAutoArray \
+            -e ./PyAutoFit \
+            -e ./PyAutoGalaxy \
+            -e "./PyAutoLens[optional]"
           pip install numba
-          pip list | grep -iE "^(autoconf|autoarray|autofit|autogalaxy|autolens|jax|numpy|scipy)"
+          pip list | grep -iE "^(autoconf|autoarray|autofit|autogalaxy|autolens|jax|numpy|scipy|nautilus)"
       - name: Enable JAX_ENABLE_X64 on 3.11+
         run: |
           if python -c "import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)"; then
