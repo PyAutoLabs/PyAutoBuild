@@ -133,14 +133,29 @@ jobs:
             # pinned. This prevents pip from substituting unrelated packages with
             # the same names from production PyPI (e.g. autoconf 0.7.7, autofit 0.73.1)
             # during dependency resolution.
-            python3 -m pip install \
-              --index-url https://test.pypi.org/simple/ \
-              --extra-index-url https://pypi.org/simple \
-              "autoconf[optional]==$VERSION" \
-              "autoarray[optional]==$VERSION" \
-              "autofit[optional]==$VERSION" \
-              "autogalaxy[optional]==$VERSION" \
-              "autolens[optional]==$VERSION"
+            #
+            # Retry the install command — TestPyPI's simple index has CDN
+            # consistency issues. The wait loop above can succeed for a version
+            # that the install (which also queries real PyPI via --extra-index-url)
+            # then fails to resolve, because different requests hit different CDN
+            # edges with different views. Retry with backoff to ride out the lag.
+            install_cnt=0
+            until python3 -m pip install \
+                  --index-url https://test.pypi.org/simple/ \
+                  --extra-index-url https://pypi.org/simple \
+                  "autoconf[optional]==$VERSION" \
+                  "autoarray[optional]==$VERSION" \
+                  "autofit[optional]==$VERSION" \
+                  "autogalaxy[optional]==$VERSION" \
+                  "autolens[optional]==$VERSION"; do
+              ((install_cnt=install_cnt+1))
+              if [[ $install_cnt -ge 30 ]]; then
+                echo "ERROR: Install failed after 30 attempts (5min)"
+                exit 1
+              fi
+              echo "  Install attempt $install_cnt failed, retrying in 10s..."
+              sleep 10
+            done
         - name: Tests
           run: |
             pushd "${{ matrix.project.path }}"
