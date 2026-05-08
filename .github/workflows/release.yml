@@ -184,6 +184,7 @@ jobs:
       PYAUTO_TEST_MODE: "1"
       PYAUTO_SMALL_DATASETS: "1"
       PYAUTO_FAST_PLOTS: "1"
+      PYAUTO_SKIP_WORKSPACE_VERSION_CHECK: "1"
       NUMBA_CACHE_DIR: /tmp/numba_cache
       MPLCONFIGDIR: /tmp/matplotlib
       JAX_ENABLE_X64: "True"
