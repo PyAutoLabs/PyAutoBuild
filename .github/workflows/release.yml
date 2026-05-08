@@ -166,6 +166,81 @@ jobs:
             pip install numba
             python3 -m pytest
 
+  run_smoke_tests:
+    runs-on: ubuntu-latest
+    needs:
+      - release_test_pypi
+      - version_number
+    if: "${{ github.event.inputs.skip_release != 'true' }}"
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [3.12]
+        workspace:
+          - { repo: PyAutoLabs/autofit_workspace,    path: autofit_workspace }
+          - { repo: PyAutoLabs/autogalaxy_workspace, path: autogalaxy_workspace }
+          - { repo: PyAutoLabs/autolens_workspace,   path: autolens_workspace }
+    env:
+      PYAUTO_TEST_MODE: "1"
+      PYAUTO_SMALL_DATASETS: "1"
+      PYAUTO_FAST_PLOTS: "1"
+      NUMBA_CACHE_DIR: /tmp/numba_cache
+      MPLCONFIGDIR: /tmp/matplotlib
+      JAX_ENABLE_X64: "True"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ matrix.workspace.repo }}
+          ref: main
+          path: ${{ matrix.workspace.path }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install from TestPyPI at pinned version
+        run: |
+          export VERSION="${{ needs.version_number.outputs.version_number }}"
+          install_cnt=0
+          until python3 -m pip install \
+                --index-url https://test.pypi.org/simple/ \
+                --extra-index-url https://pypi.org/simple \
+                "autoconf[optional]==$VERSION" \
+                "autoarray[optional]==$VERSION" \
+                "autofit[optional]==$VERSION" \
+                "autogalaxy[optional]==$VERSION" \
+                "autolens[optional]==$VERSION"; do
+            ((install_cnt=install_cnt+1))
+            if [[ $install_cnt -ge 30 ]]; then
+              echo "ERROR: Install failed after 30 attempts"
+              exit 1
+            fi
+            sleep 10
+          done
+          pip install matplotlib==3.6.0 pynufft==2025.1.1 numba
+      - name: Run smoke tests
+        run: |
+          cd ${{ matrix.workspace.path }}
+          if [ ! -f smoke_tests.txt ]; then
+            echo "No smoke_tests.txt — skipping"
+            exit 0
+          fi
+          fail=0
+          while IFS= read -r script || [ -n "$script" ]; do
+            [ -z "$script" ] && continue
+            case "$script" in \#*) continue ;; esac
+            echo "::group::$script"
+            if python "scripts/$script"; then
+              echo "PASS: $script"
+            else
+              echo "FAIL: $script"
+              fail=$((fail + 1))
+            fi
+            echo "::endgroup::"
+          done < smoke_tests.txt
+          if [ "$fail" -gt 0 ]; then
+            echo "$fail smoke test(s) failed"
+            exit 1
+          fi
+
   find_scripts:
       runs-on: ubuntu-latest
       outputs:
@@ -836,6 +911,28 @@ jobs:
         git tag -m "Release $VERSION" -a "$VERSION"
         git push origin main
         git push origin --tags
+
+
+  verify_install:
+    runs-on: ubuntu-latest
+    needs:
+      - release
+      - release_workspaces
+      - version_number
+    if: "${{ github.event.inputs.skip_release != 'true' }}"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: Jammy2211/admin_jammy
+          path: admin_jammy
+          token: ${{ secrets.PAT_PYAUTOLABS }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run verify_install A + D
+        run: |
+          export VERSION="${{ needs.version_number.outputs.version_number }}"
+          bash admin_jammy/skills/verify_install/verify_install.sh A D --version "$VERSION"
 
 
   bump_library_colab_urls:
