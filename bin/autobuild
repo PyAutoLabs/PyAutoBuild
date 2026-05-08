@@ -138,11 +138,11 @@ Options:
   --keep              Don't clean up venvs / conda envs / clones at the end
 
 Default: run all checks. Source of truth lives at
-admin_jammy/skills/verify_install/verify_install.sh.
+PyAutoBuild/autobuild/verify_install.sh.
 EOF
 }
 cmd_verify_install() {
-  bash "$ADMIN_JAMMY/skills/verify_install/verify_install.sh" "$@"
+  bash "$AUTOBUILD_DIR/verify_install.sh" "$@"
 }
 
 help_url_check() {

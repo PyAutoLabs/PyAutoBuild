@@ -923,17 +923,13 @@ jobs:
     if: "${{ github.event.inputs.skip_release != 'true' }}"
     steps:
       - uses: actions/checkout@v4
-        with:
-          repository: Jammy2211/admin_jammy
-          path: admin_jammy
-          token: ${{ secrets.PAT_PYAUTOLABS }}
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - name: Run verify_install A + D
         run: |
           export VERSION="${{ needs.version_number.outputs.version_number }}"
-          bash admin_jammy/skills/verify_install/verify_install.sh A D --version "$VERSION"
+          bash autobuild/verify_install.sh A D --version "$VERSION"
 
 
   bump_library_colab_urls:
