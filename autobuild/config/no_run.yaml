@@ -14,7 +14,6 @@ autogalaxy:
 - gui/extra_galaxies_centres # GUI scripts cannot be run
 - examples/searches # Test mode breaks search visualization.
 - data_fitting # Test mode breaks .fits file output
-- ellipse/database # Ellipse model needs refactor and JAX support
 autolens:
 - tutorial_searches
 - tutorial_5_borders # Cant get right masks, need proper update.
