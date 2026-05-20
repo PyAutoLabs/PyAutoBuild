@@ -55,10 +55,9 @@ def canonical_env_for_script(file: Path, env_config: Optional[dict]) -> Dict[str
     for key, value in env_config.get("defaults", {}).items():
         env[key] = str(value)
 
-    file_path_no_ext = str(file.with_suffix(""))
     for override in env_config.get("overrides", []):
         pattern = override["pattern"]
-        if _pattern_matches(file, file_path_no_ext, pattern):
+        if _pattern_matches(file, pattern):
             for var_name in override.get("unset", []):
                 env.pop(var_name, None)
             for key, value in override.get("set", {}).items():
