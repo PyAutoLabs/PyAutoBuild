@@ -55,14 +55,17 @@ def should_skip(file: Path, no_run_list: List[str]) -> bool:
     """
     Return True if the file matches any entry in no_run_list.
 
-    Entries with a '/' are treated as path-specific patterns: the file is
-    skipped only if that pattern appears in the file's path (without extension).
+    Entries with a '/' are treated as path-specific patterns and are
+    substring-matched against the file's full path **including extension** —
+    so a pattern may include ``.py`` to anchor against the script form (e.g.
+    ``imaging/visualization.py`` matches ``scripts/imaging/visualization.py``
+    but not ``scripts/imaging/visualization_jax.py``).
     Entries without a '/' match any file whose stem equals the entry.
     """
-    file_path_no_ext = str(file.with_suffix(""))
+    file_str = str(file)
     for pattern in no_run_list:
         if "/" in pattern:
-            if pattern in file_path_no_ext:
+            if pattern in file_str:
                 return True
         else:
             if file.stem == pattern:
@@ -72,10 +75,10 @@ def should_skip(file: Path, no_run_list: List[str]) -> bool:
 
 def _find_skip_reason(file: Path, no_run_list: List[str], skip_reasons: dict) -> str:
     """Find the reason a file is being skipped from the skip_reasons dict."""
-    file_path_no_ext = str(file.with_suffix(""))
+    file_str = str(file)
     for pattern in no_run_list:
         if "/" in pattern:
-            if pattern in file_path_no_ext:
+            if pattern in file_str:
                 return skip_reasons.get(pattern, "No reason documented")
         else:
             if file.stem == pattern:

@@ -44,11 +44,10 @@ def build_env_for_script(
         env[key] = str(value)
 
     file = Path(file)
-    file_path_no_ext = str(file.with_suffix(""))
 
     for override in env_config.get("overrides", []):
         pattern = override["pattern"]
-        if _pattern_matches(file, file_path_no_ext, pattern):
+        if _pattern_matches(file, pattern):
             for var_name in override.get("unset", []):
                 env.pop(var_name, None)
             for key, value in override.get("set", {}).items():
@@ -57,14 +56,17 @@ def build_env_for_script(
     return env
 
 
-def _pattern_matches(file: Path, file_path_no_ext: str, pattern: str) -> bool:
+def _pattern_matches(file: Path, pattern: str) -> bool:
     """Match a pattern against a file path.
 
-    Patterns containing '/' are substring-matched against the full path
-    (without extension). Patterns without '/' match the file stem exactly.
-    Same convention as build_util.should_skip().
+    Patterns containing '/' are substring-matched against the file's full
+    path **including extension** — so a pattern may include ``.py`` to anchor
+    against the script form (e.g. ``imaging/visualization.py`` matches
+    ``scripts/imaging/visualization.py`` but not
+    ``scripts/imaging/visualization_jax.py``). Patterns without '/' match the
+    file stem exactly. Same convention as build_util.should_skip().
     """
     if "/" in pattern:
-        return pattern in file_path_no_ext
+        return pattern in str(file)
     else:
         return file.stem == pattern
