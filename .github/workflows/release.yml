@@ -164,7 +164,16 @@ jobs:
             pip install pynufft==2025.1.1
             pip install pytest
             pip install numba
-            python3 -m pytest
+            # PyAutoFit's NSS tests need the handley-lab blackjax fork +
+            # yallup/nss, which can't live in the [nss] extra because
+            # PyPI bans direct git+ URLs in uploaded wheels. They're tested
+            # separately in PyAutoFit's own unittest_nss job. Here we only
+            # exercise the TestPyPI-installable surface, so skip them.
+            if [ "${{ matrix.project.path }}" = "PyAutoFit" ]; then
+              python3 -m pytest --ignore=test_autofit/non_linear/search/nest/nss
+            else
+              python3 -m pytest
+            fi
 
   run_smoke_tests:
     runs-on: ubuntu-latest
