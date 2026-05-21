@@ -131,7 +131,12 @@ for entry in "${WORKSPACES[@]}"; do
             ;;
     esac
 
-    if ! lib_version=$(python3 -c "import $pkg; print($pkg.__version__)" 2>/dev/null); then
+    # JAX's `jax_plugins.xla_cuda12 - WARNING - cuda_plugin_extension is not
+    # found` log line writes to STDOUT (not stderr) on machines where the cuda
+    # plugin extension can't be loaded — most laptop dev environments. Without
+    # `tail -n 1`, that warning prefixes the printed version string and the
+    # downstream parser fails with "could not parse versions".
+    if ! lib_version=$(python3 -c "import $pkg; print($pkg.__version__)" 2>/dev/null | tail -n 1); then
         printf "  %-45s SKIP (cannot import %s)\n" "$ws" "$pkg"
         continue
     fi
