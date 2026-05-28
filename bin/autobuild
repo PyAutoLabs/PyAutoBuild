@@ -259,7 +259,8 @@ reports.
 
 Arguments (positional):
   autofit | autogalaxy | autolens | autofit_test | autogalaxy_test | autolens_test
-  (default: all six)
+  | howtofit | howtogalaxy | howtolens
+  (default: all nine)
 
 Options:
   --results-dir    Override default output dir (default:

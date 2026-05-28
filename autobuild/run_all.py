@@ -3,9 +3,10 @@
 Run workspace scripts across one or more workspaces and produce summary reports.
 
 Usage:
-    python run_all.py                          # all 6 workspaces
+    python run_all.py                          # all 9 workspaces
     python run_all.py autolens                 # just autolens_workspace
     python run_all.py autolens_test autofit    # specific workspaces
+    python run_all.py howtolens                # just HowToLens
 
 Reports default to <autobuild>/../test_results/runs/<UTC-timestamp>/ with a
 sibling `latest` symlink pointing at the most recent successful run, so every
@@ -37,6 +38,9 @@ WORKSPACES = {
     "autofit_test": ("autofit_workspace_test", "autofit_test"),
     "autogalaxy_test": ("autogalaxy_workspace_test", "autogalaxy_test"),
     "autolens_test": ("autolens_workspace_test", "autolens_test"),
+    "howtofit": ("HowToFit", "howtofit"),
+    "howtogalaxy": ("HowToGalaxy", "howtogalaxy"),
+    "howtolens": ("HowToLens", "howtolens"),
 }
 
 DEFAULT_TIMEOUT_SECS = 300
