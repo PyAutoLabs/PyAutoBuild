@@ -407,6 +407,15 @@ jobs:
         python-version: [3.12]
         project:
             ${{ fromJSON(needs.find_scripts.outputs.matrix) }}
+    env:
+      # release_workspaces (which writes the bumped workspace_version pin
+      # into config/general.yaml on each workspace main) depends on
+      # run_scripts passing. So on the first script run after a release,
+      # the workspace pin is one version behind the just-published library
+      # and autoconf.workspace.check_version raises
+      # WorkspaceVersionMismatchError, failing every script in 1s.
+      # Mirror the bypass run_smoke_tests already uses for the same reason.
+      PYAUTO_SKIP_WORKSPACE_VERSION_CHECK: "1"
     steps:
     - name: Configure
       if: "${{ github.event.inputs.skip_scripts != 'true' }}"
@@ -531,6 +540,11 @@ jobs:
         python-version: [3.12]
         project:
             ${{ fromJSON(needs.find_scripts.outputs.matrix) }}
+    env:
+      # Same reason as run_scripts above — release_workspaces writes the
+      # bumped pin only after this job passes. Without the bypass, every
+      # notebook crashes with WorkspaceVersionMismatchError.
+      PYAUTO_SKIP_WORKSPACE_VERSION_CHECK: "1"
     steps:
     - name: Configure
       if: "${{ github.event.inputs.skip_notebooks != 'true' && !endsWith(matrix.project.name, '_test') }}"
