@@ -39,8 +39,11 @@ from add_notebook_quotes import add_notebook_quotes
 logger = logging.getLogger(__name__)
 
 # Fixed display order for the top-level ``scripts/`` folders in llms-full.txt.
-# Any folder not listed here is appended afterwards in sorted order, so a new
-# topic folder still appears (deterministically) without a code change.
+# This is a *preference* for projects whose folder set is known; any folder not
+# listed here is appended afterwards in sorted order, so a project organised by a
+# completely different folder set (e.g. autofit's inference-feature folders such
+# as ``model``, ``searches``, ``features``) still groups correctly — every folder
+# is derived from the actual ``scripts/`` tree, none are assumed to exist.
 GROUP_ORDER = [
     "imaging",
     "group",
@@ -51,6 +54,27 @@ GROUP_ORDER = [
     "weak",
     "guides",
 ]
+
+# Display name for the workspace header in llms-full.txt, keyed by the project
+# name passed to generate.py. Falls back to a generic, project-derived title so a
+# new project still produces a sensible header without a code change — and so no
+# project's framing (e.g. lensing) leaks into another's catalogue.
+WORKSPACE_TITLES = {
+    "autofit": "PyAutoFit Workspace",
+    "autoconf": "PyAutoConf Workspace",
+    "autocti": "PyAutoCTI Workspace",
+    "autogalaxy": "PyAutoGalaxy Workspace",
+    "autolens": "PyAutoLens Workspace",
+}
+
+
+def _workspace_title(project: Optional[str]) -> str:
+    """Human-readable workspace title for the llms-full.txt header."""
+    if project and project in WORKSPACE_TITLES:
+        return WORKSPACE_TITLES[project]
+    if project:
+        return f"{project} workspace"
+    return "Workspace"
 
 # Best-effort cross-reference detection: any token ending in .py or .ipynb that
 # appears inside the header docstrings. Matches bare names and paths alike.
@@ -261,7 +285,7 @@ def _group_for(record: dict) -> str:
     return parts[1] if len(parts) > 2 else "(root)"
 
 
-def _render_llms_full(records: List[dict]) -> str:
+def _render_llms_full(records: List[dict], project: Optional[str] = None) -> str:
     """Render the human-readable ``llms-full.txt`` content (deterministic)."""
     lines: List[str] = []
     lines.append(
@@ -269,7 +293,7 @@ def _render_llms_full(records: List[dict]) -> str:
         "regenerate with generate.py."
     )
     lines.append("")
-    lines.append("# PyAutoLens Workspace — Full Catalogue")
+    lines.append(f"# {_workspace_title(project)} — Full Catalogue")
     lines.append("")
     lines.append(
         "> Complete, generated listing of every script (and its matching "
@@ -313,10 +337,14 @@ def _render_llms_full(records: List[dict]) -> str:
     return "\n".join(lines).rstrip("\n") + "\n"
 
 
-def write_catalogue(workspace_path: Path) -> List[Path]:
+def write_catalogue(workspace_path: Path, project: Optional[str] = None) -> List[Path]:
     """
     Build the catalogue and write ``llms-full.txt`` and ``workspace_index.json``
     into the workspace root. Returns the paths written.
+
+    ``project`` (the name passed to ``generate.py``) only selects the workspace
+    title in the ``llms-full.txt`` header; the records and grouping are derived
+    entirely from the workspace's actual ``scripts/`` tree.
     """
     workspace_path = Path(workspace_path)
     records = build_records(workspace_path)
@@ -324,7 +352,7 @@ def write_catalogue(workspace_path: Path) -> List[Path]:
     llms_full_path = workspace_path / "llms-full.txt"
     index_path = workspace_path / "workspace_index.json"
 
-    llms_full_path.write_text(_render_llms_full(records), encoding="utf-8")
+    llms_full_path.write_text(_render_llms_full(records, project), encoding="utf-8")
     index_path.write_text(
         json.dumps(records, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",

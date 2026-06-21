@@ -181,13 +181,13 @@ if __name__ == "__main__":
     for read_me_path in scripts_path.rglob("*.md"):
         copy_to_notebooks(read_me_path)
 
-    # Generate the LLM-facing workspace catalogue alongside the notebooks, so
-    # the two cannot drift out of sync. Catalogue grouping is autolens-specific,
-    # so this is gated on that project; other projects are unaffected.
-    if project == "autolens":
-        import navigator
+    # Generate the LLM-facing workspace catalogue alongside the notebooks, so the
+    # two cannot drift out of sync. Grouping is derived from the project's actual
+    # top-level ``scripts/`` folders (no fixed folder set is assumed), so this runs
+    # for every project; ``project`` only selects the catalogue's display title.
+    import navigator
 
-        navigator.write_catalogue(WORKSPACE_PATH)
+    navigator.write_catalogue(WORKSPACE_PATH, project)
 
     if report is not None:
         report_path = report.write(Path(args.report_dir))
