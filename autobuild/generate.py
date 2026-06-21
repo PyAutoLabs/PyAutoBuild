@@ -48,6 +48,28 @@ def notebook_path_(script_path_):
     return Path(str(script_path_).replace("/scripts/", "/notebooks/"))
 
 
+def iter_script_paths(scripts_path):
+    """
+    Yield the workspace scripts that are converted into notebooks, in a stable
+    (sorted) order.
+
+    This is the single source of truth for which ``scripts/**/*.py`` files are
+    processed: ``generate.py`` uses it to build notebooks and ``navigator.py``
+    uses it to build the catalogue, so the catalogue is equal to the notebook
+    set by construction. Excludes ``__init__.py`` and the dev-only
+    ``scripts/scratch/`` scratchpad.
+    """
+    scripts_path = Path(scripts_path)
+    paths = []
+    for script_path in scripts_path.rglob("*.py"):
+        if script_path.name == "__init__.py":
+            continue
+        if "scratch" in script_path.relative_to(scripts_path).parts:
+            continue
+        paths.append(script_path)
+    return sorted(paths, key=lambda p: p.as_posix())
+
+
 def copy_to_notebooks(source):
     target = notebook_path_(source)
     os.makedirs(target.parent, exist_ok=True)
@@ -106,9 +128,7 @@ if __name__ == "__main__":
 
     shutil.rmtree(WORKSPACE_PATH / "notebooks", ignore_errors=True)
 
-    for script_path in scripts_path.rglob("*.py"):
-        if script_path.name == "__init__.py":
-            continue
+    for script_path in iter_script_paths(scripts_path):
         start = time.time()
         if is_copy_file(script_path):
             try:
@@ -160,6 +180,14 @@ if __name__ == "__main__":
 
     for read_me_path in scripts_path.rglob("*.md"):
         copy_to_notebooks(read_me_path)
+
+    # Generate the LLM-facing workspace catalogue alongside the notebooks, so
+    # the two cannot drift out of sync. Catalogue grouping is autolens-specific,
+    # so this is gated on that project; other projects are unaffected.
+    if project == "autolens":
+        import navigator
+
+        navigator.write_catalogue(WORKSPACE_PATH)
 
     if report is not None:
         report_path = report.write(Path(args.report_dir))
