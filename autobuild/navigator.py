@@ -65,6 +65,9 @@ WORKSPACE_TITLES = {
     "autocti": "PyAutoCTI Workspace",
     "autogalaxy": "PyAutoGalaxy Workspace",
     "autolens": "PyAutoLens Workspace",
+    "howtolens": "HowToLens Lectures",
+    "howtogalaxy": "HowToGalaxy Lectures",
+    "howtofit": "HowToFit Lectures",
 }
 
 
