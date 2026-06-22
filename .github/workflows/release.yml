@@ -1146,3 +1146,54 @@ jobs:
         run: |
           cd workspace
           git push origin main
+
+  # ---------------------------------------------------------------------------
+  # Wiki-currency check (autolens_assistant).
+  #
+  # PyAutoBuild only orchestrates and reports here — it calls into the assistant's
+  # reusable workflow, which is the single home of the currency rules (symbol audit,
+  # idiom deny-list, provenance). No wiki-currency rule is reimplemented in this repo.
+  #
+  # Runs AFTER release_workspaces so the assistant's API baseline — regenerated and
+  # committed to autolens_assistant `main` in that job — is already in place when the
+  # reusable workflow's `--check-version` compares the just-released stack against it.
+  # ---------------------------------------------------------------------------
+  wiki_currency_check:
+    needs:
+      - version_number
+      - release_workspaces
+    if: "${{ github.event.inputs.skip_release != 'true' }}"
+    uses: PyAutoLabs/autolens_assistant/.github/workflows/wiki-currency.yml@main
+    with:
+      stack_version: ${{ needs.version_number.outputs.version_number }}
+      assistant_ref: main
+
+  # On drift, open a "wiki drift" issue against autolens_assistant listing the offending
+  # pages (the report artifact the reusable workflow uploaded). Reporting only — the
+  # judgement of what is stale was made by the assistant's check.
+  wiki_drift_issue:
+    needs:
+      - version_number
+      - wiki_currency_check
+    if: "${{ always() && needs.wiki_currency_check.result == 'failure' }}"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download drift report
+        uses: actions/download-artifact@v4
+        with:
+          name: wiki-drift-report
+          path: drift
+      - name: Open wiki-drift issue against autolens_assistant
+        env:
+          GH_TOKEN: ${{ secrets.PAT_PYAUTOLABS }}
+        run: |
+          VERSION="${{ needs.version_number.outputs.version_number }}"
+          BODY=drift/drift-report.md
+          if [ ! -f "$BODY" ]; then
+            printf '# Wiki-currency drift at release %s\n\nThe check failed but no drift-report artifact was found; see the run logs.\n' "$VERSION" > "$BODY"
+          fi
+          gh issue create \
+            --repo PyAutoLabs/autolens_assistant \
+            --title "wiki drift detected at release $VERSION" \
+            --body-file "$BODY" \
+          || echo "::warning::could not open wiki-drift issue (non-fatal)"
