@@ -25,7 +25,6 @@ ADMIN_JAMMY="$PYAUTOBASE/admin_jammy"
 SUBCOMMAND_ORDER=(
   "# Build and release pipeline"
   pre_build
-  verify_workspace_versions
   "# Release validation"
   verify_install
   url_check
@@ -55,8 +54,7 @@ SUBCOMMAND_ORDER=(
 
 declare -A SHORT_DESC=(
   [pre_build]="Format, generate, push workspaces, then dispatch release.yml"
-  [verify_workspace_versions]="Block release if any workspace version.txt is ahead of its installed library"
-  [verify_install]="Release-readiness gate: pip & conda install-path checks for PyAutoLens"
+  [verify_install]="Shim → pyauto-pulse verify_install (deep install-path checks)"
   [url_check]="Fail if forbidden Binder/Colab URL patterns appear in docs"
   [bump_colab_urls]="Rewrite Colab URLs in cwd from old date-tag to new date-tag"
   [generate]="Convert workspace scripts/ to notebooks/ (run from a workspace root)"
@@ -114,47 +112,24 @@ cmd_pre_build() {
   bash "$REPO/pre_build.sh" "$@"
 }
 
-help_verify_workspace_versions() {
-  cat <<'EOF'
-autobuild verify_workspace_versions
-
-Fail-fast check: aborts release if any workspace version.txt is ahead
-of the currently-installed library version. Used by pre_build before
-dispatching the release workflow to guard against bootstrap commits
-that set an aspirational version.txt.
-EOF
-}
-cmd_verify_workspace_versions() {
-  bash "$REPO/verify_workspace_versions.sh" "$@"
-}
-
 # ----- Release validation -----
 
 help_verify_install() {
   cat <<'EOF'
 autobuild verify_install [CHECKS...] [--version VERSION] [--keep]
 
-Release-readiness gate for PyAutoLens. Runs a suite of independent
-install-path checks (pip & conda) in throwaway venvs and reports a
-per-check PASS / FAIL / SKIP table.
+Shim → `pyauto-pulse verify_install`. Release-readiness checking is Pulse's
+job now (PyAutoBuild is a pure executor), so this delegates to PyAutoPulse,
+which owns the install-path checks (pip & conda, A–E) and writes the JSON
+sidecar that `pyauto-pulse readiness` consumes.
 
-Checks:
-  A   pip install autolens (default python3) + start_here.py + welcome.py
-  B   pip install autolens correctly REJECTED on python3.9 / python3.11
-  C   conda install flow (python=3.12) + start_here.py + welcome.py
-  D   pip install "autolens[optional]" resolves and imports
-  E   pip install autolens==2025.10.6.1 (yanked) installs by explicit pin
-
-Options:
-  --version VERSION   Pin a specific PyPI version (applies to A, C, D)
-  --keep              Don't clean up venvs / conda envs / clones at the end
-
-Default: run all checks. Source of truth lives at
-PyAutoBuild/autobuild/verify_install.sh.
+See `pyauto-pulse help verify_install` for full docs.
 EOF
 }
 cmd_verify_install() {
-  bash "$AUTOBUILD_DIR/verify_install.sh" "$@"
+  local pulse_bin
+  pulse_bin="$(_pulse_resolve)" || return $?
+  exec "$pulse_bin" verify_install "$@"
 }
 
 help_url_check() {

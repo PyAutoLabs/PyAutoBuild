@@ -116,12 +116,11 @@ else
     git push
 fi
 
-# Block release if any workspace's version.txt is ahead of its installed
-# library — every welcome.py / start_here.py run would otherwise crash with
-# WorkspaceVersionMismatchError until the release dispatch landed.
-echo ""
-echo "=== Verifying workspace versions ==="
-bash "$PYAUTOBASE/PyAutoBuild/verify_workspace_versions.sh"
+# Release readiness (version skew, including the version.txt-ahead crash that
+# used to be checked here) is now Pulse's job, not Build's: PyAutoBuild is a
+# pure executor. The PyAutoAgent release agent gates on `pyauto-pulse readiness`
+# before invoking this script; a human running pre_build directly is trusted to
+# have checked `pyauto-pulse readiness` themselves.
 
 # Trigger the GitHub Actions release workflow
 echo ""

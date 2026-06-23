@@ -51,14 +51,7 @@ This script does the following for each repo:
 
 Before the per-repo loop, `pre_build.sh` invokes `admin_jammy/software/ensure_workspace_labels.sh` to assert the canonical `pending-release` label across every release-window repo (idempotent — a no-op when nothing has drifted).
 
-After the loop, before dispatching the workflow, `pre_build.sh` invokes `verify_workspace_versions.sh` — a fail-fast check that blocks the release if any workspace's pinned version is ahead of the currently-installed library version. This guards against bootstrap commits that set an aspirational version, which would otherwise crash every script run with `WorkspaceVersionMismatchError` until the next release lands.
-
-The pinned workspace version is resolved with the same precedence as `autoconf.workspace.check_version`:
-
-1. `config/general.yaml` — `version.workspace_version` key (canonical, written by `release.yml`).
-2. `version.txt` at the workspace root (legacy fallback, also written by `release.yml`).
-
-Both sources are written atomically by the `Write workspace version` step in `release.yml`; if they ever disagree on a checked-out workspace, `verify_workspace_versions.sh` fails before dispatch. The runtime check in `autoconf.workspace.check_version` (called from every library's `__init__.py`) reads the same precedence, so workspace/library mismatches surface on every script run, not just `welcome.py`.
+Release-readiness checking is **not** Build's job — PyAutoBuild is a pure executor. The version-skew check that used to live here (`verify_workspace_versions.sh`, a fail-fast guard against a workspace pinned ahead of its installed library, or a `config/general.yaml` ↔ `version.txt` disagreement) now lives in **PyAutoPulse** as the `version_skew` check feeding `pyauto-pulse readiness`. The PyAutoAgent release agent gates on `pyauto-pulse readiness` before invoking `pre_build`; a human running `pre_build` directly is trusted to have checked readiness first. See PyAutoPulse for the resolution precedence (`config/general.yaml:version.workspace_version`, then `version.txt`) — identical to `autoconf.workspace.check_version`, so workspace/library mismatches still surface on every script run via each library's `__init__.py`.
 
 `generate.py` is run from the workspace root with `PYTHONPATH` pointing at `PyAutoBuild/autobuild/`. Only specific safe directories are committed — never `output/`, `output_model/`, or run-generated artefacts. After all workspaces are done, PyAutoBuild itself is committed and pushed, then `gh workflow run release.yml` dispatches the GitHub Actions release.
 
