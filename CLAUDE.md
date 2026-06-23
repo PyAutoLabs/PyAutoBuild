@@ -105,7 +105,7 @@ All scripts in `autobuild/` are run from within a checked-out workspace director
 - **`generate.py <project>`** — Converts Python scripts in `scripts/` to `.ipynb` notebooks in `notebooks/`, run from within the workspace root
 - **`script_matrix.py <project1> [project2 ...]`** — Outputs a JSON matrix of `{name, directory}` pairs for GitHub Actions matrix strategy
 - **`tag_and_merge.sh --version <version>`** — Commits pending changes and tags library repos (PyAutoConf, PyAutoFit, PyAutoArray, PyAutoGalaxy, PyAutoLens) for release
-- **`url_check.sh [directory]`** — Fails if any forbidden Binder/Colab URL pattern appears in `*.rst`, `*.md`, `*.ipynb`, or `*.py` under the directory. Forbidden: any `mybinder.org` URL, Colab URLs with `Jammy2211/` owner, and Colab URLs pinned to `/blob/release/`. Each affected workspace and library repo runs this in CI to prevent regressions.
+- **`url_check`** — URL hygiene moved to PyAutoPulse (Pulse owns all health checking). `autobuild url_check` is now a thin shim to `pyauto-pulse url_check`; the ecosystem-wide sweep runs from PyAutoPulse's central `url-check.yml` workflow (replacing the old per-repo `url_check.yml` workflows). The runnable scripts live at `PyAutoPulse/pulse/checks/url_check*.{sh,py}`.
 - **`bump_colab_urls.sh <new-tag>`** — Rewrites every `colab.research.google.com/github/PyAutoLabs/<repo>/blob/<old-tag>/...` URL in cwd to use `<new-tag>`, where `<repo>` is one of `autofit_workspace`, `autogalaxy_workspace`, `autolens_workspace`, `HowToGalaxy`, `HowToLens`. Called by the `release_workspaces` and `bump_library_colab_urls` jobs in `release.yml` so README/docs Colab links always pin to the just-released tag. Idempotent; skips URLs not in canonical PyAutoLabs/date-tagged form.
 
 ## Architecture
