@@ -55,7 +55,7 @@ SUBCOMMAND_ORDER=(
 declare -A SHORT_DESC=(
   [pre_build]="Format, generate, push workspaces, then dispatch release.yml"
   [verify_install]="Shim → pyauto-pulse verify_install (deep install-path checks)"
-  [url_check]="Fail if forbidden Binder/Colab URL patterns appear in docs"
+  [url_check]="Shim → pyauto-pulse url_check (forbidden Binder/Colab URL guard)"
   [bump_colab_urls]="Rewrite Colab URLs in cwd from old date-tag to new date-tag"
   [generate]="Convert workspace scripts/ to notebooks/ (run from a workspace root)"
   [run]="Execute notebooks in a workspace folder"
@@ -136,18 +136,18 @@ help_url_check() {
   cat <<'EOF'
 autobuild url_check [directory]
 
-Scan rst/md/ipynb/py files under <directory> (default: cwd) and exit
-non-zero if any forbidden URL pattern is present:
+Shim → `pyauto-pulse url_check`. URL hygiene is PyAutoPulse's job now
+(PyAutoBuild is a pure executor). Scans rst/md/ipynb/py under <directory>
+(default cwd) for forbidden Binder/Colab/owner URL patterns.
 
-  1. mybinder.org URLs (Binder is no longer supported — use Colab)
-  2. Colab URLs with Jammy2211 owner (workspaces now live under PyAutoLabs)
-  3. Colab URLs pinned to /blob/release/ (the release branch is gone — use a tag)
-
-Each affected workspace and library repo runs this in CI to prevent regressions.
+The ecosystem-wide sweep runs from PyAutoPulse's central url-check.yml
+workflow; see `pyauto-pulse help url_sweep`.
 EOF
 }
 cmd_url_check() {
-  bash "$AUTOBUILD_DIR/url_check.sh" "$@"
+  local pulse_bin
+  pulse_bin="$(_pulse_resolve)" || return $?
+  exec "$pulse_bin" url_check "$@"
 }
 
 help_bump_colab_urls() {
