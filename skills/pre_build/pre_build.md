@@ -50,8 +50,12 @@ The script handles every mechanical step of the pre-build flow:
 2. For every workspace, runs `black .`, bumps the README version pin (`<Package> vYYYY.M.D.<minor>`) where applicable, runs `generate.py` for projects with a notebook target, and stages only the safe directories (`config/`, `notebooks/`, `scripts/`, `dataset/`, plus `slam_pipeline/` for `autolens_workspace`).
 3. Commits and pushes each workspace (skipping if no changes are staged).
 4. Commits and pushes PyAutoBuild itself.
-5. Runs `verify_workspace_versions.sh` to block release if any workspace `version.txt` is ahead of its installed library.
-6. Dispatches `gh workflow run release.yml --repo PyAutoLabs/PyAutoBuild --field minor_version=<N>`.
+5. Dispatches `gh workflow run release.yml --repo PyAutoLabs/PyAutoBuild --field minor_version=<N>`.
+
+Release-readiness — including the version-skew check that used to run here
+(`verify_workspace_versions.sh`) — is gated **upstream by PyAutoHeart**
+(`pyauto-heart readiness`) before `pre_build` is invoked, not by this step. Build
+is a pure executor.
 
 If the script exits non-zero, surface the failure to the user verbatim and stop. Do not attempt to retry or repair — the script's preconditions (`set -e`) ensure that any non-zero exit reflects a real problem (lint failure, push rejected, workflow dispatch error).
 
