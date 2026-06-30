@@ -9,21 +9,14 @@ on:
         description: 'Minor version to release'
         required: true
         default: '1'
-      # Two orthogonal dispatch axes:
-      #  - rehearsal (mode): false = real release; true = build + publish to
-      #    TestPyPI only, then STOP. The Heart/Brain release-validation gate
-      #    dispatches rehearsal=true (Stage 2); it emits the resolved version and
-      #    cannot mutate anything (no PyPI, no tag, no notebook commits).
-      #  - skip_release (dry-run, only meaningful when rehearsal=false): build to
-      #    TestPyPI but skip every mutation of a real release (PyPI upload, git
-      #    tags, notebook/version commits, Colab bumps).
-      # (The old force-through knobs skip_scripts / skip_notebooks and the
-      # update_notebook_visualisations path were removed with the Heart/Build
-      # split — Build is a pure executor and no longer needs ad-hoc skip levers.)
-      skip_release:
-        description: 'Dry run: build + publish to TestPyPI but skip the real release (no PyPI upload, no git tags, no workspace commits).'
-        required: false
-        default: 'false'
+      # rehearsal is the one mode switch: false (default) = a full real release;
+      # true = build + publish to TestPyPI only, then STOP. The Heart/Brain
+      # release-validation gate dispatches rehearsal=true (Stage 2); it emits the
+      # resolved version and cannot mutate anything (no PyPI, no tag, no commits).
+      # (The old force-through knobs skip_scripts / skip_notebooks / skip_release
+      # and the update_notebook_visualisations path were removed with the
+      # Heart/Build split — Build is a pure executor with no ad-hoc skip levers;
+      # "build without releasing" is now exactly what rehearsal mode is for.)
       rehearsal:
         description: 'Rehearsal mode: build + publish to TestPyPI only, then STOP (no PyPI, no git tag, no notebook commits, no Colab bumps). Used by the Heart/Brain release-validation gate.'
         required: false
@@ -245,7 +238,7 @@ jobs:
       - version_number
     # Skipped in rehearsal mode: rehearsal halts after the TestPyPI publish; the
     # workspace integration surface is validated downstream by Heart, not here.
-    if: "${{ github.event.inputs.skip_release != 'true' && github.event.inputs.rehearsal != 'true' }}"
+    if: "${{ github.event.inputs.rehearsal != 'true' }}"
     strategy:
       fail-fast: false
       matrix:
@@ -363,33 +356,27 @@ jobs:
           pat: PAT_PYAUTOLABS
     steps:
     - uses: actions/checkout@v2
-      if: "${{ github.event.inputs.skip_release != 'true' }}"
       with:
           path: PyAutoBuild
     - name: Checkout
-      if: "${{ github.event.inputs.skip_release != 'true' }}"
       run: |
         PAT="${{ secrets[matrix.project.pat] }}"
         git clone -b "${{ matrix.project.ref }}" "https://$PAT@github.com/${{ matrix.project.repository }}.git" "${{ matrix.project.path }}"
     - name: Set up Python 3.12
       uses: actions/setup-python@v2
-      if: "${{ github.event.inputs.skip_release != 'true' }}"
       with:
         python-version: "3.12"
     - name: Configure Git
-      if: "${{ github.event.inputs.skip_release != 'true' }}"
       run: |
         git config --global user.email "richard@rghsoftware.co.uk"
         git config --global user.name "GitHub Actions bot"
     - name: Update version
-      if: "${{ github.event.inputs.skip_release != 'true' }}"
       run: |
         pushd "${{ matrix.project.path }}"
         VERSION="${{ needs.version_number.outputs.version_number }}"
         sed -i "s/__version__ = [\.\"\'0-9]*/__version__ = \"$VERSION\"/g" */__init__.py
         git commit "-am 'Updated version in __init__ to $VERSION"
     - name: Tag
-      if: "${{ github.event.inputs.skip_release != 'true' }}"
       run: |
         pushd "${{ matrix.project.path }}"
         VERSION="${{ needs.version_number.outputs.version_number }}"
@@ -399,7 +386,6 @@ jobs:
         git push
         git push --tags
     - name: Build
-      if: "${{ github.event.inputs.skip_release != 'true' }}"
       run: |
         pushd "${{ matrix.project.path }}"
         export VERSION="${{ needs.version_number.outputs.version_number }}"
@@ -407,7 +393,6 @@ jobs:
         python3 -m pip install --upgrade build
         python3 -m build
     - name: Upload to PyPI
-      if: "${{ github.event.inputs.skip_release != 'true' }}"
       run: |
         python3 -m pip install twine==6.0.1
         pushd "${{ matrix.project.path }}"
@@ -418,7 +403,7 @@ jobs:
     needs:
       - release
       - version_number
-    if: "${{ github.event.inputs.skip_release != 'true' && github.event.inputs.rehearsal != 'true' }}"
+    if: "${{ github.event.inputs.rehearsal != 'true' }}"
     strategy:
       fail-fast: false
       matrix:
@@ -511,29 +496,23 @@ jobs:
             write_api_baseline: true
     steps:
     - uses: actions/checkout@v2
-      if: "${{ github.event.inputs.skip_release != 'true' }}"
       with:
           path: PyAutoBuild
     - name: Checkout
-      if: "${{ github.event.inputs.skip_release != 'true' }}"
       run: |
         git clone -b main "https://$PAT@github.com/${{ matrix.workspace.repository }}.git" workspace
     - name: Configure Git
-      if: "${{ github.event.inputs.skip_release != 'true' }}"
       run: |
         git config --global user.email "richard@rghsoftware.co.uk"
         git config --global user.name "GitHub Actions bot"
     - name: Set up Python ${{ matrix.python-version }}
-      if: "${{ github.event.inputs.skip_release != 'true' }}"
       uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install Jupyter dependency
-      if: "${{ github.event.inputs.skip_release != 'true' }}"
       run: |
         pip install jupyter ipynb-py-convert PyYAML
     - name: Update version in README
-      if: "${{ github.event.inputs.skip_release != 'true' }}"
       run: |
         VERSION="${{ needs.version_number.outputs.version_number }}"
         PACKAGE="${{ matrix.workspace.package }}"
@@ -541,7 +520,7 @@ jobs:
         sed -i "s/$PACKAGE v[0-9]\{4\}\.[0-9]*\.[0-9]*\.[0-9]*/$PACKAGE v$VERSION/g" README.rst README.md 2>/dev/null || true
         git add README.rst README.md 2>/dev/null || true
     - name: Update jupyter notebooks
-      if: "${{ github.event.inputs.skip_release != 'true' && matrix.workspace.generate_notebooks == true }}"
+      if: "${{ matrix.workspace.generate_notebooks == true }}"
       run: |
         export PYTHONPATH=$PYTHONPATH:$(pwd)/PyAutoBuild
         AUTOBUILD_PATH="$(pwd)/PyAutoBuild/autobuild"
@@ -550,7 +529,6 @@ jobs:
         git add *.ipynb
         git commit -m "Release ${{ needs.version_number.outputs.version_number }}: update notebooks and version" || true
     - name: Write workspace version
-      if: "${{ github.event.inputs.skip_release != 'true' }}"
       run: |
         VERSION="${{ needs.version_number.outputs.version_number }}"
         pushd workspace
@@ -578,7 +556,7 @@ jobs:
         git add version.txt config/general.yaml 2>/dev/null || git add version.txt
         git commit -m "Release $VERSION: pin workspace version" || true
     - name: Regenerate API audit baseline
-      if: "${{ github.event.inputs.skip_release != 'true' && matrix.workspace.write_api_baseline == true }}"
+      if: "${{ matrix.workspace.write_api_baseline == true }}"
       env:
         NUMBA_CACHE_DIR: /tmp/numba_cache
         MPLCONFIGDIR: /tmp/matplotlib
@@ -613,7 +591,7 @@ jobs:
         git commit -m "Release $VERSION: regenerate API audit baseline" || true
         popd
     - name: Bump Colab URL tag refs
-      if: "${{ github.event.inputs.skip_release != 'true' && matrix.workspace.bump_colab_urls == true }}"
+      if: "${{ matrix.workspace.bump_colab_urls == true }}"
       run: |
         VERSION="${{ needs.version_number.outputs.version_number }}"
         pushd workspace
@@ -621,7 +599,6 @@ jobs:
         git add -A
         git commit -m "Release $VERSION: bump Colab URL tag refs" || true
     - name: Tag and push to main
-      if: "${{ github.event.inputs.skip_release != 'true' }}"
       run: |
         cd workspace
         VERSION="${{ needs.version_number.outputs.version_number }}"
@@ -637,7 +614,7 @@ jobs:
     needs:
       - release
       - version_number
-    if: "${{ github.event.inputs.skip_release != 'true' && github.event.inputs.rehearsal != 'true' }}"
+    if: "${{ github.event.inputs.rehearsal != 'true' }}"
     strategy:
       fail-fast: false
       matrix:
@@ -682,7 +659,7 @@ jobs:
     needs:
       - version_number
       - release_workspaces
-    if: "${{ github.event.inputs.skip_release != 'true' && github.event.inputs.rehearsal != 'true' }}"
+    if: "${{ github.event.inputs.rehearsal != 'true' }}"
     uses: PyAutoLabs/autolens_assistant/.github/workflows/wiki-currency.yml@main
     with:
       stack_version: ${{ needs.version_number.outputs.version_number }}

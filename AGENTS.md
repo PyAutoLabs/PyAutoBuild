@@ -14,14 +14,14 @@ release-readiness checks of its own — that is PyAutoHeart's job.
 - **PyAutoBuild — the executor.** Packaging, tagging, notebook generation, and
   PyPI publication via `release.yml`. Build runs **no** readiness checks of its
   own and never re-derives a gate decision; it just executes.
-- **PyAutoAgent — the brain.** Hosts the agents that connect the two. It owns no
+- **PyAutoBrain — the brain.** Hosts the agents that connect the two. It owns no
   checks and no release steps; it gates on Heart and delegates execution to
   Build.
 
 ## The call chain (always this order)
 
 ```
-Agent  →  Heart (gate)  →  Build (execute)
+Brain  →  Heart (gate)  →  Build (execute)
 ```
 
 The agent asks `pyauto-heart readiness --json`; only on a **green** verdict does

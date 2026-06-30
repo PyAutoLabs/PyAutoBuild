@@ -3,14 +3,16 @@
 # for all workspace repos, then commit & push PyAutoBuild, then trigger
 # the GitHub Actions release workflow.
 #
-# Usage: bash pre_build.sh [minor_version] [skip_release]
+# Usage: bash pre_build.sh [minor_version]
 #   minor_version  Minor version suffix (default: 1)
-#   skip_release   Whether to skip the release stage, true or false (default: false)
+#
+# pre_build always dispatches a full real release. To build + publish to
+# TestPyPI without releasing (e.g. the Heart/Brain validation gate), dispatch
+# release.yml directly with rehearsal=true instead.
 
 set -e
 
 MINOR_VERSION="${1:-1}"
-SKIP_RELEASE="${2:-false}"
 
 # Resolve PYAUTOBASE from this script's location (same idiom as bin/autobuild)
 # so pre_build.sh works from any checkout — Linux, WSL, anywhere.
@@ -121,8 +123,7 @@ echo ""
 echo "=== Triggering release workflow (minor_version=$MINOR_VERSION) ==="
 gh workflow run release.yml \
     --repo PyAutoLabs/PyAutoBuild \
-    --field minor_version="$MINOR_VERSION" \
-    --field skip_release="$SKIP_RELEASE"
+    --field minor_version="$MINOR_VERSION"
 
 echo ""
 echo "Pre-build complete. Workflow dispatched."

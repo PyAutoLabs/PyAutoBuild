@@ -4,13 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Project Does
 
-PyAutoBuild is the **executor** of the PyAuto release ecosystem (PyAutoConf, PyAutoFit, PyAutoArray, PyAutoGalaxy, PyAutoLens) — it runs **no** release-readiness checks of its own (that is PyAutoHeart's job; see [`AGENTS.md`](AGENTS.md) for the canonical Build/Heart/Agent boundary and the `Agent → Heart → Build` call chain). It automates:
+PyAutoBuild is the **executor** of the PyAuto release ecosystem (PyAutoConf, PyAutoFit, PyAutoArray, PyAutoGalaxy, PyAutoLens) — it runs **no** release-readiness checks of its own (that is PyAutoHeart's job; see [`AGENTS.md`](AGENTS.md) for the canonical Build/Heart/Brain boundary and the `Brain → Heart → Build` call chain). It automates:
 1. Building and releasing packages to TestPyPI, then PyPI
 2. Running workspace Python scripts (integration tests)
 3. Converting Python scripts to Jupyter notebooks and executing them
 4. Committing generated notebooks to workspace `main` branches and tagging each workspace with a version matching the released library
 
-The pipeline is triggered via GitHub Actions (`release.yml`) and is manually dispatched with configurable options. Release-readiness gating happens upstream: the PyAutoAgent release agent calls `pyauto-heart readiness` and only dispatches `release.yml` on a green verdict.
+The pipeline is triggered via GitHub Actions (`release.yml`) and is manually dispatched with configurable options. Release-readiness gating happens upstream: the PyAutoBrain release agent calls `pyauto-heart readiness` and only dispatches `release.yml` on a green verdict.
 
 ## Bash CLI
 
@@ -51,7 +51,7 @@ This script does the following for each repo:
 
 Before the per-repo loop, `pre_build.sh` invokes `admin_jammy/software/ensure_workspace_labels.sh` to assert the canonical `pending-release` label across every release-window repo (idempotent — a no-op when nothing has drifted).
 
-Release-readiness checking is **not** Build's job — PyAutoBuild is a pure executor. The version-skew check that used to live here (`verify_workspace_versions.sh`, a fail-fast guard against a workspace pinned ahead of its installed library, or a `config/general.yaml` ↔ `version.txt` disagreement) now lives in **PyAutoHeart** as the `version_skew` check feeding `pyauto-heart readiness`. The PyAutoAgent release agent gates on `pyauto-heart readiness` before invoking `pre_build`; a human running `pre_build` directly is trusted to have checked readiness first. See PyAutoHeart for the resolution precedence (`config/general.yaml:version.workspace_version`, then `version.txt`) — identical to `autoconf.workspace.check_version`, so workspace/library mismatches still surface on every script run via each library's `__init__.py`.
+Release-readiness checking is **not** Build's job — PyAutoBuild is a pure executor. The version-skew check that used to live here (`verify_workspace_versions.sh`, a fail-fast guard against a workspace pinned ahead of its installed library, or a `config/general.yaml` ↔ `version.txt` disagreement) now lives in **PyAutoHeart** as the `version_skew` check feeding `pyauto-heart readiness`. The PyAutoBrain release agent gates on `pyauto-heart readiness` before invoking `pre_build`; a human running `pre_build` directly is trusted to have checked readiness first. See PyAutoHeart for the resolution precedence (`config/general.yaml:version.workspace_version`, then `version.txt`) — identical to `autoconf.workspace.check_version`, so workspace/library mismatches still surface on every script run via each library's `__init__.py`.
 
 `generate.py` is run from the workspace root with `PYTHONPATH` pointing at `PyAutoBuild/autobuild/`. Only specific safe directories are committed — never `output/`, `output_model/`, or run-generated artefacts. After all workspaces are done, PyAutoBuild itself is committed and pushed, then `gh workflow run release.yml` dispatches the GitHub Actions release.
 
@@ -148,18 +148,18 @@ Each workspace owns its own build config under `<workspace>/config/build/`:
 
 The workflow (`release.yml`) is manually dispatched with inputs:
 - `minor_version` — appended to date-based version (format: `YYYY.M.D.minor`)
-- `rehearsal` — TestPyPI-only rehearsal mode: build every package from source, publish to
-  TestPyPI, emit the resolved version as the `testpypi-rehearsal-version` artifact, then STOP
-  (no PyPI upload, no git tag, no notebook/version commits, no Colab bumps). This is the mode the
-  Heart/Brain release-validation gate dispatches so it can install and validate the built wheels.
-- `skip_release` — dry run: build + publish to TestPyPI but skip the real release (no PyPI upload,
-  no git tags, no workspace commits). Only meaningful when `rehearsal` is false.
+- `rehearsal` — the one mode switch (default `false` = full real release). When `true`, it is
+  TestPyPI-only rehearsal mode: build every package from source, publish to TestPyPI, emit the
+  resolved version as the `testpypi-rehearsal-version` artifact, then STOP (no PyPI upload, no git
+  tag, no notebook/version commits, no Colab bumps). This is the mode the Heart/Brain
+  release-validation gate dispatches so it can install and validate the built wheels.
 
-(The legacy `skip_scripts` / `skip_notebooks` force-through knobs and the
+(The legacy `skip_scripts` / `skip_notebooks` / `skip_release` force-through knobs and the
 `update_notebook_visualisations` path were removed with the Heart/Build split — Build is a pure
-executor and no longer carries ad-hoc skip levers or an inline notebook-visualisation job.)
+executor with no ad-hoc skip levers or inline notebook-visualisation job. "Build without
+releasing" is now exactly what `rehearsal` mode is for.)
 
-`release.yml` is a **pure executor**: it builds, tests-the-install, publishes to PyPI, and commits generated notebooks + version pins to the workspaces. Workspace-integration validation (the old `find_scripts` / `generate_notebooks` / `run_scripts` / `run_notebooks` / `analyze_results` jobs) moved to **PyAutoHeart**'s `workspace-validation.yml`; release readiness is gated upstream by the PyAutoAgent release agent via `pyauto-heart readiness` before this workflow is dispatched. The `script_matrix.py` / `run_python.py` / `run.py` / `aggregate_results.py` primitives remain here and are checked out + reused by the Heart workflow.
+`release.yml` is a **pure executor**: it builds, tests-the-install, publishes to PyPI, and commits generated notebooks + version pins to the workspaces. Workspace-integration validation (the old `find_scripts` / `generate_notebooks` / `run_scripts` / `run_notebooks` / `analyze_results` jobs) moved to **PyAutoHeart**'s `workspace-validation.yml`; release readiness is gated upstream by the PyAutoBrain release agent via `pyauto-heart readiness` before this workflow is dispatched. The `script_matrix.py` / `run_python.py` / `run.py` / `aggregate_results.py` primitives remain here and are checked out + reused by the Heart workflow.
 ## Never rewrite history
 
 NEVER perform these operations on any repo with a remote:
