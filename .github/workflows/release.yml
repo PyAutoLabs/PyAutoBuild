@@ -1,8 +1,9 @@
 name: PyAuto Release
 
 on:
-  schedule:
-    - cron: '0 2 * * 1-5'  # 2 AM UTC weekdays
+  # --- PAUSED 2026-07-06: routine cron disabled org-wide; re-enable by uncommenting ---
+  # schedule:
+  #   - cron: '0 2 * * 1-5'  # 2 AM UTC weekdays
   workflow_dispatch:
     inputs:
       minor_version:

@@ -2,8 +2,9 @@ name: Python Version Matrix
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 3 * * 1'  # Monday 03:00 UTC, off-cycle from the daily release
+  # --- PAUSED 2026-07-06: routine cron disabled org-wide; re-enable by uncommenting ---
+  # schedule:
+  #   - cron: '0 3 * * 1'  # Monday 03:00 UTC, off-cycle from the daily release
 
 # Force local editable builds to outrank PyPI versions so pip's resolver
 # doesn't replace `pip install -e ./PyAutoConf` (1.0.dev0) with PyPI's
