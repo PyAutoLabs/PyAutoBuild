@@ -43,7 +43,7 @@ SUBCOMMAND_ORDER=(
   tag_and_merge
   "# Triage support"
   repro_command
-  "# Monitoring daemon (delegates to PyAutoPulse)"
+  "# Monitoring daemon (delegates to PyAutoHeart)"
   watch
   status
   tick
@@ -54,8 +54,8 @@ SUBCOMMAND_ORDER=(
 
 declare -A SHORT_DESC=(
   [pre_build]="Format, generate, push workspaces, then dispatch release.yml"
-  [verify_install]="Shim → pyauto-pulse verify_install (deep install-path checks)"
-  [url_check]="Shim → pyauto-pulse url_check (forbidden Binder/Colab URL guard)"
+  [verify_install]="Shim → pyauto-heart verify_install (deep install-path checks)"
+  [url_check]="Shim → pyauto-heart url_check (forbidden Binder/Colab URL guard)"
   [bump_colab_urls]="Rewrite Colab URLs in cwd from old date-tag to new date-tag"
   [generate]="Convert workspace scripts/ to notebooks/ (run from a workspace root)"
   [run]="Execute notebooks in a workspace folder"
@@ -68,10 +68,10 @@ declare -A SHORT_DESC=(
   [create_analysis_issue]="Open a GitHub issue with the release report and assign Copilot"
   [tag_and_merge]="Commit and tag every library repo for a release"
   [repro_command]="Emit the shell command autobuild uses to run one script (for triage handoffs)"
-  [watch]="Start the PyAutoPulse monitoring daemon (Ctrl-C to stop)"
-  [status]="Print the latest PyAutoPulse state cache with green/yellow/red"
-  [tick]="Force one PyAutoPulse refresh cycle"
-  [fix]="Bundle context for a Pulse failure topic and emit a Claude invocation"
+  [watch]="Start the PyAutoHeart monitoring daemon (Ctrl-C to stop)"
+  [status]="Print the latest PyAutoHeart state cache with green/yellow/red"
+  [tick]="Force one PyAutoHeart refresh cycle"
+  [fix]="Bundle context for a Heart failure topic and emit a Claude invocation"
   [help]="List subcommands or show details for one"
 )
 
@@ -118,36 +118,36 @@ help_verify_install() {
   cat <<'EOF'
 autobuild verify_install [CHECKS...] [--version VERSION] [--keep]
 
-Shim → `pyauto-pulse verify_install`. Release-readiness checking is Pulse's
-job now (PyAutoBuild is a pure executor), so this delegates to PyAutoPulse,
+Shim → `pyauto-heart verify_install`. Release-readiness checking is Heart's
+job now (PyAutoBuild is a pure executor), so this delegates to PyAutoHeart,
 which owns the install-path checks (pip & conda, A–E) and writes the JSON
-sidecar that `pyauto-pulse readiness` consumes.
+sidecar that `pyauto-heart readiness` consumes.
 
-See `pyauto-pulse help verify_install` for full docs.
+See `pyauto-heart help verify_install` for full docs.
 EOF
 }
 cmd_verify_install() {
-  local pulse_bin
-  pulse_bin="$(_pulse_resolve)" || return $?
-  exec "$pulse_bin" verify_install "$@"
+  local heart_bin
+  heart_bin="$(_heart_resolve)" || return $?
+  exec "$heart_bin" verify_install "$@"
 }
 
 help_url_check() {
   cat <<'EOF'
 autobuild url_check [directory]
 
-Shim → `pyauto-pulse url_check`. URL hygiene is PyAutoPulse's job now
+Shim → `pyauto-heart url_check`. URL hygiene is PyAutoHeart's job now
 (PyAutoBuild is a pure executor). Scans rst/md/ipynb/py under <directory>
 (default cwd) for forbidden Binder/Colab/owner URL patterns.
 
-The ecosystem-wide sweep runs from PyAutoPulse's central url-check.yml
-workflow; see `pyauto-pulse help url_sweep`.
+The ecosystem-wide sweep runs from PyAutoHeart's central url-check.yml
+workflow; see `pyauto-heart help url_sweep`.
 EOF
 }
 cmd_url_check() {
-  local pulse_bin
-  pulse_bin="$(_pulse_resolve)" || return $?
-  exec "$pulse_bin" url_check "$@"
+  local heart_bin
+  heart_bin="$(_heart_resolve)" || return $?
+  exec "$heart_bin" url_check "$@"
 }
 
 help_bump_colab_urls() {
@@ -394,42 +394,42 @@ cmd_repro_command() {
   _python_in_autobuild repro_command.py "$@"
 }
 
-# ----- Monitoring daemon (delegates to PyAutoPulse) -----
+# ----- Monitoring daemon (delegates to PyAutoHeart) -----
 #
-# These four subcommands shim through to the standalone `pyauto-pulse`
-# binary installed from the sibling PyAutoLabs/PyAutoPulse repo. The
-# split is deliberate: PyAutoBuild produces releases; PyAutoPulse
+# These four subcommands shim through to the standalone `pyauto-heart`
+# binary installed from the sibling PyAutoLabs/PyAutoHeart repo. The
+# split is deliberate: PyAutoBuild produces releases; PyAutoHeart
 # monitors developer state continuously. Co-locating the CLI surface
 # (via these shims) without sharing Python code keeps both repos
 # independently releasable.
 #
-# If `pyauto-pulse` is not on PATH, the shim prints an install hint and
+# If `pyauto-heart` is not on PATH, the shim prints an install hint and
 # exits 127.
 
-_pulse_resolve() {
-  # Resolve a path/command for the pyauto-pulse binary. Try:
-  #   1. PATH (works if `pip install pyautopulse` made the entry point global)
-  #   2. The bin script in the sibling PyAutoPulse repo checkout
+_heart_resolve() {
+  # Resolve a path/command for the pyauto-heart binary. Try:
+  #   1. PATH (works if `pip install pyautoheart` made the entry point global)
+  #   2. The bin script in the sibling PyAutoHeart repo checkout
   # Prints the resolved invocation on stdout, returns 0 on success.
-  if command -v pyauto-pulse >/dev/null 2>&1; then
-    printf 'pyauto-pulse'
+  if command -v pyauto-heart >/dev/null 2>&1; then
+    printf 'pyauto-heart'
     return 0
   fi
-  local pulse_bin="$HOME/Code/PyAutoLabs/PyAutoPulse/bin/pyauto-pulse"
-  if [[ -x "$pulse_bin" ]]; then
-    printf '%s' "$pulse_bin"
+  local heart_bin="$HOME/Code/PyAutoLabs/PyAutoHeart/bin/pyauto-heart"
+  if [[ -x "$heart_bin" ]]; then
+    printf '%s' "$heart_bin"
     return 0
   fi
   cat >&2 <<EOF
-autobuild: pyauto-pulse was not found on PATH or at the sibling checkout
-$HOME/Code/PyAutoLabs/PyAutoPulse/.
+autobuild: pyauto-heart was not found on PATH or at the sibling checkout
+$HOME/Code/PyAutoLabs/PyAutoHeart/.
 
-PyAutoPulse is not pip-installed — like the other PyAuto repos it runs from
+PyAutoHeart is not pip-installed — like the other PyAuto repos it runs from
 its checkout via PYTHONPATH + PATH in ~/.bashrc. Set it up with:
-  git clone https://github.com/PyAutoLabs/PyAutoPulse.git \$HOME/Code/PyAutoLabs/PyAutoPulse
+  git clone https://github.com/PyAutoLabs/PyAutoHeart.git \$HOME/Code/PyAutoLabs/PyAutoHeart
   # add to ~/.bashrc:
-  #   export PATH="\$HOME/Code/PyAutoLabs/PyAutoPulse/bin:\$PATH"
-  #   export PYTHONPATH="\$PYTHONPATH:\$HOME/Code/PyAutoLabs/PyAutoPulse"
+  #   export PATH="\$HOME/Code/PyAutoLabs/PyAutoHeart/bin:\$PATH"
+  #   export PYTHONPATH="\$PYTHONPATH:\$HOME/Code/PyAutoLabs/PyAutoHeart"
   source ~/.bashrc
 EOF
   return 127
@@ -439,54 +439,54 @@ help_watch() {
   cat <<'EOF'
 autobuild watch [interval_seconds]
 
-Shim → `pyauto-pulse watch`. Run the PyAutoPulse monitoring daemon in
+Shim → `pyauto-heart watch`. Run the PyAutoHeart monitoring daemon in
 the foreground, refreshing the cached state every N seconds (default
 300s). Ctrl-C to stop.
 
-See `pyauto-pulse help watch` for full docs.
+See `pyauto-heart help watch` for full docs.
 EOF
 }
 cmd_watch() {
-  local pulse_bin
-  pulse_bin="$(_pulse_resolve)" || return $?
-  exec "$pulse_bin" watch "$@"
+  local heart_bin
+  heart_bin="$(_heart_resolve)" || return $?
+  exec "$heart_bin" watch "$@"
 }
 
 help_status() {
   cat <<'EOF'
 autobuild status [--json] [--quiet] [--no-color]
 
-Shim → `pyauto-pulse status`. Print the most recent Pulse state cache
+Shim → `pyauto-heart status`. Print the most recent Heart state cache
 with green/yellow/red colouring. Exits non-zero if no cache exists
 (run `autobuild tick` first).
 EOF
 }
 cmd_status() {
-  local pulse_bin
-  pulse_bin="$(_pulse_resolve)" || return $?
-  exec "$pulse_bin" status "$@"
+  local heart_bin
+  heart_bin="$(_heart_resolve)" || return $?
+  exec "$heart_bin" status "$@"
 }
 
 help_tick() {
   cat <<'EOF'
 autobuild tick
 
-Shim → `pyauto-pulse tick`. Force one PyAutoPulse refresh cycle: every
+Shim → `pyauto-heart tick`. Force one PyAutoHeart refresh cycle: every
 check (repo state, CI status, open PRs, worktree drift, script
 timing) runs and the aggregated snapshot is written.
 EOF
 }
 cmd_tick() {
-  local pulse_bin
-  pulse_bin="$(_pulse_resolve)" || return $?
-  exec "$pulse_bin" tick "$@"
+  local heart_bin
+  heart_bin="$(_heart_resolve)" || return $?
+  exec "$heart_bin" tick "$@"
 }
 
 help_fix() {
   cat <<'EOF'
 autobuild fix <topic> [args...]
 
-Shim → `pyauto-pulse fix`. Bundle context for a specific failing topic
+Shim → `pyauto-heart fix`. Bundle context for a specific failing topic
 and emit a Claude Code invocation you can paste/run.
 
 Topics:
@@ -496,9 +496,9 @@ Topics:
 EOF
 }
 cmd_fix() {
-  local pulse_bin
-  pulse_bin="$(_pulse_resolve)" || return $?
-  exec "$pulse_bin" fix "$@"
+  local heart_bin
+  heart_bin="$(_heart_resolve)" || return $?
+  exec "$heart_bin" fix "$@"
 }
 
 # ----- Meta -----
