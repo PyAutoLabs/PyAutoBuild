@@ -37,5 +37,27 @@ tick|fix` are thin shims that delegate to `pyauto-heart`. Build keeps only the
 executor primitives (`pre_build`, `generate`, `run*`, `tag_and_merge`,
 `bump_colab_urls`, `release.yml`).
 
-See [`CLAUDE.md`](CLAUDE.md) for the build pipeline, workspace folder structure,
-config files, and `release.yml` details.
+See [`docs/internals.md`](docs/internals.md) for the build pipeline, workspace
+folder structure, config files, and `release.yml` details. Read it when
+changing the pipeline itself, not by default.
+
+## Never rewrite history
+
+NEVER perform these operations on any repo with a remote:
+
+- `git init` in a directory already tracked by git
+- `rm -rf .git && git init`
+- Commit with subject "Initial commit", "Fresh start", "Start fresh", "Reset
+  for AI workflow", or any equivalent message on a branch with a remote
+- `git push --force` to `main` (or any branch tracked as `origin/HEAD`)
+- `git filter-repo` / `git filter-branch` on shared branches
+- `git rebase -i` rewriting commits already pushed to a shared branch
+
+If the working tree needs a clean state, the **only** correct sequence is:
+
+    git fetch origin
+    git reset --hard origin/main
+    git clean -fd
+
+This applies equally to humans, local Claude Code, cloud Claude agents, Codex,
+and any other agent.
