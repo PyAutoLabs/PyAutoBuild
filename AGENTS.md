@@ -4,29 +4,13 @@ PyAutoBuild is the **executor** of the PyAuto release ecosystem: packaging,
 tagging, notebook generation, and PyPI publication via `release.yml`. It runs no
 release-readiness checks of its own — that is PyAutoHeart's job.
 
-## The boundary (one description, mirrored in all three repos)
+## The boundary
 
-- **PyAutoHeart — the health authority.** All health/readiness logic lives here:
-  version drift, install-path, URL hygiene, CI/worktree/timing monitoring.
-  `pyauto-heart readiness` is the **authoritative** green/yellow/red verdict —
-  the single "is it safe to release?" gate. Heart is an observer: it reads and
-  emits verdicts; it never writes into other repos and never triggers Build.
-- **PyAutoBuild — the executor.** Packaging, tagging, notebook generation, and
-  PyPI publication via `release.yml`. Build runs **no** readiness checks of its
-  own and never re-derives a gate decision; it just executes.
-- **PyAutoBrain — the brain.** Hosts the agents that connect the two. It owns no
-  checks and no release steps; it gates on Heart and delegates execution to
-  Build.
-
-## The call chain (always this order)
-
-```
-Brain  →  Heart (gate)  →  Build (execute)
-```
-
-The agent asks `pyauto-heart readiness --json`; only on a **green** verdict does
-it trigger Build's release. Heart never triggers Build; Build never re-derives a
-gate decision the agent already made.
+The organs, boundaries and the `Brain → Heart (gate) → Build (execute)` call
+chain are defined once in `PyAutoBrain/ORGANISM.md`. Build's side of it:
+**pure executor** — it runs no readiness checks of its own and never
+re-derives a gate decision; readiness is gated upstream by the Brain via
+`pyauto-heart readiness`.
 
 ## What moved out of Build
 
