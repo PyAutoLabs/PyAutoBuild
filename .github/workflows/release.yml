@@ -1,9 +1,10 @@
 name: PyAuto Release
 
 on:
-  # --- PAUSED 2026-07-06: routine cron disabled org-wide; re-enable by uncommenting ---
-  # schedule:
-  #   - cron: '0 2 * * 1-5'  # 2 AM UTC weekdays
+  schedule:
+    # 2 AM UTC weekdays. Scheduled runs REHEARSE (TestPyPI-only) until the repo
+    # variable RELEASE_MODE is set to 'live' — see the resolve_mode job.
+    - cron: '0 2 * * 1-5'
   workflow_dispatch:
     inputs:
       minor_version:
@@ -24,8 +25,35 @@ on:
         default: 'false'
 
 jobs:
+  # Single source of truth for rehearsal-vs-live. workflow_dispatch passes the
+  # `rehearsal` input through unchanged; scheduled runs REHEARSE (TestPyPI-only)
+  # until the PyAutoBuild repo variable RELEASE_MODE is set to 'live' — flipping
+  # the daily release to real PyPI is a one-variable change, no commit needed.
+  # The `needs` context is direct-only in GitHub Actions, so every job gating on
+  # this output must list resolve_mode in its own needs.
+  resolve_mode:
+    runs-on: ubuntu-latest
+    outputs:
+      rehearsal: ${{ steps.mode.outputs.rehearsal }}
+    steps:
+      - name: Resolve rehearsal vs live
+        id: mode
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            if [ "${{ vars.RELEASE_MODE }}" = "live" ]; then
+              REHEARSAL=false
+            else
+              REHEARSAL=true
+            fi
+          else
+            REHEARSAL="${{ github.event.inputs.rehearsal || 'false' }}"
+          fi
+          echo "rehearsal=${REHEARSAL}" >> "$GITHUB_OUTPUT"
+          echo "event=\`${{ github.event_name }}\` RELEASE_MODE=\`${{ vars.RELEASE_MODE }}\` → rehearsal=\`${REHEARSAL}\`" >> "$GITHUB_STEP_SUMMARY"
+
   version_number:
     runs-on: ubuntu-latest
+    needs: resolve_mode
     outputs:
       version_number: ${{ steps.version_number.outputs.version_number }}
     steps:
@@ -46,7 +74,7 @@ jobs:
           # source of *this* run — a bare `--skip-existing` would silently leave
           # stale wheels from a prior rehearsal of the same date/minor in place.
           # run_number*100+run_attempt is unique per dispatch and per re-run attempt.
-          if [ "${{ github.event.inputs.rehearsal }}" = "true" ]
+          if [ "${{ needs.resolve_mode.outputs.rehearsal }}" = "true" ]
           then
               DEV_SEGMENT=$(( ${{ github.run_number }} * 100 + RUN_ATTEMPT ))
               VERSION="${DATE_FORMATTED}.${MINOR_VERSION:-${{ github.run_number }}}.dev${DEV_SEGMENT}"
@@ -235,11 +263,12 @@ jobs:
   run_smoke_tests:
     runs-on: ubuntu-latest
     needs:
+      - resolve_mode
       - release_test_pypi
       - version_number
     # Skipped in rehearsal mode: rehearsal halts after the TestPyPI publish; the
     # workspace integration surface is validated downstream by Heart, not here.
-    if: "${{ github.event.inputs.rehearsal != 'true' }}"
+    if: "${{ needs.resolve_mode.outputs.rehearsal != 'true' }}"
     strategy:
       fail-fast: false
       matrix:
@@ -320,7 +349,7 @@ jobs:
     # release_workspaces, bump_library_colab_urls, and (via release_workspaces)
     # wiki_currency_check / wiki_drift_issue. The full-release path is unchanged
     # when rehearsal is not 'true'.
-    if: "${{ github.event.inputs.rehearsal != 'true' }}"
+    if: "${{ needs.resolve_mode.outputs.rehearsal != 'true' }}"
     env:
       TWINE_REPOSITORY: pypi
       TWINE_USERNAME: __token__
@@ -330,6 +359,7 @@ jobs:
       # (workspace-validation.yml). Build is a pure executor: it gates only on
       # the TestPyPI build + version. Release readiness is enforced upstream by
       # the release agent via `pyauto-heart readiness`.
+      - resolve_mode
       - release_test_pypi
       - version_number
     strategy:
@@ -402,9 +432,10 @@ jobs:
   publish_release_notes:
     runs-on: ubuntu-latest
     needs:
+      - resolve_mode
       - release
       - version_number
-    if: "${{ github.event.inputs.rehearsal != 'true' }}"
+    if: "${{ needs.resolve_mode.outputs.rehearsal != 'true' }}"
     strategy:
       fail-fast: false
       matrix:
@@ -613,9 +644,10 @@ jobs:
     env:
       PAT: ${{ secrets.PAT_PYAUTOLABS }}
     needs:
+      - resolve_mode
       - release
       - version_number
-    if: "${{ github.event.inputs.rehearsal != 'true' }}"
+    if: "${{ needs.resolve_mode.outputs.rehearsal != 'true' }}"
     strategy:
       fail-fast: false
       matrix:
@@ -658,9 +690,10 @@ jobs:
   # ---------------------------------------------------------------------------
   wiki_currency_check:
     needs:
+      - resolve_mode
       - version_number
       - release_workspaces
-    if: "${{ github.event.inputs.rehearsal != 'true' }}"
+    if: "${{ needs.resolve_mode.outputs.rehearsal != 'true' }}"
     uses: PyAutoLabs/autolens_assistant/.github/workflows/wiki-currency.yml@main
     with:
       stack_version: ${{ needs.version_number.outputs.version_number }}
@@ -711,9 +744,10 @@ jobs:
   rehearsal_version:
     runs-on: ubuntu-latest
     needs:
+      - resolve_mode
       - version_number
       - release_test_pypi
-    if: "${{ github.event.inputs.rehearsal == 'true' }}"
+    if: "${{ needs.resolve_mode.outputs.rehearsal == 'true' }}"
     steps:
       - name: Record resolved TestPyPI version
         run: |
