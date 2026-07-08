@@ -83,6 +83,8 @@ run_workspace() {
 # Positional args: repo project [generate=true] [slam=false] [readme_pkg=""]
 # readme_pkg: when non-empty, the README's "<pkg> vYYYY.M.D.B" pin is bumped to
 # the new VERSION. Empty for workspaces with no README version pin.
+# The repo names are checked against PyAutoMind/repos.yaml (the body map) by
+# `repos_sync.py --check`; the flags are Build policy and live only here.
 run_workspace "autofit_workspace"                    "autofit"      true   false  PyAutoFit
 run_workspace "autogalaxy_workspace"                 "autogalaxy"   true   false  PyAutoGalaxy
 run_workspace "autolens_workspace"                   "autolens"     true   true   PyAutoLens
