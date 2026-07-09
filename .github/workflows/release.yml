@@ -629,7 +629,7 @@ jobs:
         # Belt-and-braces JAX install (same reason as the install steps above).
         pip install "jax>=0.7,<0.11" "jaxlib>=0.7,<0.11"
         pushd workspace
-        python3 work/audit_skill_apis.py --write-baseline
+        python3 autoassistant/audit_skill_apis.py --write-baseline
         git add wiki/core/api_audit_baseline.json
         git commit -m "Release $VERSION: regenerate API audit baseline" || true
         popd
