@@ -29,8 +29,6 @@ autolens:
 - hpc/example_cpu # HPC paths dont exist locally.
 - examples/searches # Test mode breaks search visualization.
 - data_fitting # Test mode breaks .fits file output
-- cluster/modeling # Cluster modeling is not maintained and test mode breaks it.
-- cluster/start_here # Cluster analysis is not maintained and test mode breaks it.
 - mass_stellar_dark/modeling # Requires CSE to be JAX enabled.
 - mass_stellar_dark/slam # Requires CSE to be JAX enabled.
 - shapelets/modeling # Issue with JAX, claude remind me about this when you next look at build.
