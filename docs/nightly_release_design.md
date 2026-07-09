@@ -111,10 +111,13 @@ skipped), that is not a pipeline self-commit.**
   Merged PRs need no separate query — a merged PR *is* commits on `main`;
   direct pushes count too, which matches how this organism actually works.
 - **Window**: since the previous nightly run's window-end timestamp, persisted
-  as a tiny artifact/cache key by the driver (fallback: last 24 h). A
-  timestamp window, not "since last release", so a night that was skipped for
-  a Heart stop does not silently swallow that day's activity from the next
-  night's judgement.
+  by the driver as the PyAutoBrain repo Actions variable
+  `NIGHTLY_LAST_WINDOW_END` (fallback: last 24 h). *(Phase-2 refinement: a
+  repo variable, not the artifact/cache key phase 1 sketched — durable across
+  runner evictions and one API call.)* The anchor advances **only** on
+  shipped or empty-skip outcomes — a night stopped at a gate, or a dry-run
+  night, leaves it, so unshipped activity is never silently swallowed from
+  the next night's judgement.
 - **Self-commit exclusion** — a release must never count as the next night's
   activity. Post-#118/#120 the pipeline no longer stamps versions into
   library repos, so self-commits are only: workspace notebook regeneration,

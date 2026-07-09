@@ -1,10 +1,11 @@
 name: PyAuto Release
 
+# Scheduling authority lives in PyAutoBrain's nightly-release.yml (the
+# activity-gated, Heart-GREEN-gated driver — docs/nightly_release_design.md §2).
+# The former 2 AM cron was removed with it: with a cron here, flipping
+# RELEASE_MODE=live would have released ungated. Build executes releases; it
+# does not decide when.
 on:
-  schedule:
-    # 2 AM UTC weekdays. Scheduled runs REHEARSE (TestPyPI-only) until the repo
-    # variable RELEASE_MODE is set to 'live' — see the resolve_mode job.
-    - cron: '0 2 * * 1-5'
   workflow_dispatch:
     inputs:
       minor_version:
@@ -25,10 +26,10 @@ on:
         default: 'false'
 
 jobs:
-  # Single source of truth for rehearsal-vs-live. workflow_dispatch passes the
-  # `rehearsal` input through unchanged; scheduled runs REHEARSE (TestPyPI-only)
-  # until the PyAutoBuild repo variable RELEASE_MODE is set to 'live' — flipping
-  # the daily release to real PyPI is a one-variable change, no commit needed.
+  # Single source of truth for rehearsal-vs-live: the `rehearsal` dispatch
+  # input, passed through unchanged. (The schedule branch — and the
+  # RELEASE_MODE repo variable it consulted — went with the cron above; every
+  # run is now a dispatch, whether human or the Brain nightly driver.)
   # The `needs` context is direct-only in GitHub Actions, so every job gating on
   # this output must list resolve_mode in its own needs.
   resolve_mode:
@@ -39,17 +40,9 @@ jobs:
       - name: Resolve rehearsal vs live
         id: mode
         run: |
-          if [ "${{ github.event_name }}" = "schedule" ]; then
-            if [ "${{ vars.RELEASE_MODE }}" = "live" ]; then
-              REHEARSAL=false
-            else
-              REHEARSAL=true
-            fi
-          else
-            REHEARSAL="${{ github.event.inputs.rehearsal || 'false' }}"
-          fi
+          REHEARSAL="${{ github.event.inputs.rehearsal || 'false' }}"
           echo "rehearsal=${REHEARSAL}" >> "$GITHUB_OUTPUT"
-          echo "event=\`${{ github.event_name }}\` RELEASE_MODE=\`${{ vars.RELEASE_MODE }}\` → rehearsal=\`${REHEARSAL}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "event=\`${{ github.event_name }}\` → rehearsal=\`${REHEARSAL}\`" >> "$GITHUB_STEP_SUMMARY"
 
   version_number:
     runs-on: ubuntu-latest
@@ -61,11 +54,11 @@ jobs:
         run: |
           export DATE_FORMATTED=`date +"%Y.%-m.%-d"`
           MINOR_VERSION="${{ github.event.inputs.minor_version }}"
-          # Scheduled runs have no inputs, so the minor defaults. NEVER default
-          # to github.run_number: the 2026.6.25.641→2026.7.6.649 accidental
-          # series was scheduled runs publishing run-number versions. The date
-          # already makes a scheduled version unique; a same-day manual dispatch
-          # must choose its own minor_version (twine loudly rejects duplicates).
+          # NEVER default to github.run_number: the 2026.6.25.641→2026.7.6.649
+          # accidental series was (since-removed) scheduled runs publishing
+          # run-number versions. The date already makes a nightly version
+          # unique; a same-day second dispatch must choose its own
+          # minor_version (twine loudly rejects duplicates).
           VERSION="${DATE_FORMATTED}.${MINOR_VERSION:-1}"
           RUN_ATTEMPT="${{ github.run_attempt }}"
           if [ "$RUN_ATTEMPT" -gt "1" ]
