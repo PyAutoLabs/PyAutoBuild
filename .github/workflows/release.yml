@@ -437,6 +437,46 @@ jobs:
         pushd "${{ matrix.project.path }}"
         python3 -m twine upload --verbose dist/*
 
+  # One Slack message per LIVE release outcome to #pipreleases
+  # (PYAUTO_RELEASE_WEBHOOK_URL). Rehearsals stay silent — TestPyPI .dev builds
+  # are covered by the morning health verdict. Posts on FAILURE too: a broken
+  # live release must never pass silently (the June/July yank post-mortem,
+  # #118/#120). `always()` keeps this job alive when `release` fails; the
+  # rehearsal guard skips it whenever the run is not a live release.
+  announce_release:
+    runs-on: ubuntu-latest
+    needs:
+      - resolve_mode
+      - version_number
+      - release
+    if: "${{ always() && needs.resolve_mode.outputs.rehearsal != 'true' }}"
+    steps:
+      - name: Announce release outcome in Slack
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.PYAUTO_RELEASE_WEBHOOK_URL }}
+        run: |
+          VERSION="${{ needs.version_number.outputs.version_number }}"
+          RESULT="${{ needs.release.result }}"
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+            echo "::warning::PYAUTO_RELEASE_WEBHOOK_URL not set — skipping announcement"
+            exit 0
+          fi
+          if [ "$RESULT" = "success" ]; then
+            jq -n --arg v "$VERSION" --arg url "$RUN_URL" \
+              '{text: (":package: *PyAuto \($v) released to PyPI* — autoconf / autofit / autoarray / autogalaxy / autolens.\nUpgrade with: `pip install --upgrade autolens`\n<\($url)|Release run>")}' \
+              > payload.json
+          else
+            jq -n --arg v "$VERSION" --arg r "$RESULT" --arg url "$RUN_URL" \
+              '{text: (":rotating_light: *PyAuto release \($v) did NOT complete* (release job: \($r)).\n<\($url)|Inspect the run> — PyPI may hold a partial set of the five packages; verify before anyone installs.")}' \
+              > payload.json
+          fi
+          curl -sS -X POST \
+               -H "Content-Type: application/json" \
+               --fail-with-body \
+               --data @payload.json \
+               "$SLACK_WEBHOOK_URL"
+
   publish_release_notes:
     runs-on: ubuntu-latest
     needs:
