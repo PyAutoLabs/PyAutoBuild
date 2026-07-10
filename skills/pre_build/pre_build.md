@@ -80,5 +80,5 @@ to assess the results.
 
 ## Notes
 
-- The same operation is callable from the shell as `autobuild pre_build <minor>` (or `autobuild-help pre_build` for documentation). Use this skill when you want the Claude validation + summary wrapper; use the bash CLI when you just want to fire off the build.
+- The same operation is callable from the shell as `autobuild pre_build <minor>` (or `autobuild-help pre_build` for documentation). Use this skill when you want the agent validation and summary wrapper; use the bash CLI when you just want to fire off the build.
 - README version-bump is now handled inside `pre_build.sh` (it used to live only in this skill).
