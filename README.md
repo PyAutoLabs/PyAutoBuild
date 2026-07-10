@@ -1,5 +1,7 @@
 # PyAutoBuild
 
+📖 **Full documentation → <https://pyautoscientist.readthedocs.io>** — the whole PyAutoScientist organism, including how to fork and run your own.
+
 The Hands of the PyAuto organism: the executor that packages, tags, builds
 notebooks, and releases the PyAuto libraries (PyAutoConf, PyAutoFit,
 PyAutoArray, PyAutoGalaxy, PyAutoLens) and their workspaces to PyPI. It
