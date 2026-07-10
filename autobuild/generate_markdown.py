@@ -35,6 +35,7 @@ import argparse
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -132,13 +133,29 @@ def script_title(script_path: Path) -> str:
     return script_path.stem
 
 
-def _clean_stream_text(text: str) -> str:
+def _redactions_for(workspace_path: Path):
+    """
+    Substitutions scrubbing the local machine layout out of published output:
+    the workspace path becomes its bare name, sibling checkouts (e.g. library
+    paths in warnings) become `...`, and any other home path becomes `~`.
+    """
+    return [
+        (str(workspace_path), workspace_path.name),
+        (str(workspace_path.parent), "..."),
+        (os.path.expanduser("~"), "~"),
+    ]
+
+
+def _clean_stream_text(text: str, redactions=()) -> str:
     """
     Make captured stream output readable in markdown: drop ANSI escapes,
-    resolve carriage-return progress lines to their final state, and truncate
-    very long output (search progress logs) to head + tail.
+    resolve carriage-return progress lines to their final state, redact
+    absolute local paths (a machine layout must not be published), and
+    truncate very long output (search progress logs) to head + tail.
     """
     text = ANSI_RE.sub("", text)
+    for old, new in redactions:
+        text = text.replace(old, new)
     lines = [raw.split("\r")[-1] for raw in text.split("\n")]
     if len(lines) > STREAM_MAX_LINES:
         truncated = len(lines) - STREAM_HEAD_LINES - STREAM_TAIL_LINES
@@ -150,7 +167,7 @@ def _clean_stream_text(text: str) -> str:
     return "\n".join(lines)
 
 
-def clean_notebook_outputs(notebook_path: Path):
+def clean_notebook_outputs(notebook_path: Path, redactions=()):
     """Clean every stream output in an executed notebook, in place."""
     with open(notebook_path) as f:
         notebook = json.load(f)
@@ -162,7 +179,7 @@ def clean_notebook_outputs(notebook_path: Path):
             source = output.get("text", "")
             if isinstance(source, list):
                 source = "".join(source)
-            output["text"] = _clean_stream_text(source)
+            output["text"] = _clean_stream_text(source, redactions=redactions)
 
     with open(notebook_path, "w") as f:
         json.dump(notebook, f, indent=1)
@@ -254,7 +271,13 @@ def render_script(
         )
         print(f"  executed in {time.time() - start:.0f}s")
 
-        clean_notebook_outputs(notebook_path)
+        clean_notebook_outputs(notebook_path, redactions=_redactions_for(workspace_path))
+
+        # nbconvert never removes stale support files, so a script that now
+        # produces fewer figures would leave orphan PNGs behind.
+        files_dir = workspace_path / md_dir / f"{script_rel.stem}_files"
+        if files_dir.exists():
+            shutil.rmtree(files_dir)
 
         subprocess.run(
             [

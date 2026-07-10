@@ -111,6 +111,19 @@ class TestStreamCleaning:
     def test_short_output_untouched(self):
         assert generate_markdown._clean_stream_text("a\nb") == "a\nb"
 
+    def test_local_paths_redacted(self):
+        redactions = generate_markdown._redactions_for(
+            Path("/home/user/wt/autolens_workspace")
+        )
+        cleaned = generate_markdown._clean_stream_text(
+            "Working Directory has been set to `/home/user/wt/autolens_workspace`\n"
+            "/home/user/wt/PyAutoArray/autoarray/operators/convolver.py:1415: UserWarning",
+            redactions=redactions,
+        )
+        assert "Working Directory has been set to `autolens_workspace`" in cleaned
+        assert ".../PyAutoArray/autoarray/operators/convolver.py:1415" in cleaned
+        assert "/home/user" not in cleaned
+
     def test_clean_notebook_outputs(self, tmp_path):
         notebook = {
             "cells": [
