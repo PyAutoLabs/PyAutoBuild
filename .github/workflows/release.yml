@@ -443,11 +443,25 @@ jobs:
       - resolve_mode
       - version_number
       - release
+      # Wait for the GitHub Releases so a success post can embed the PyAutoLens
+      # notes (read back via `gh release view`). Kept in `always()` below so a
+      # failed release — or a failed notes leg — still pages.
+      - publish_release_notes
     if: "${{ always() && needs.resolve_mode.outputs.rehearsal != 'true' }}"
     steps:
+      - uses: actions/checkout@v2
+        with:
+          path: PyAutoBuild
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.12'
       - name: Announce release outcome in Slack
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.PYAUTO_RELEASE_WEBHOOK_URL }}
+          # Cross-repo PAT so `gh release view` can read the PyAutoLens release
+          # (the default GITHUB_TOKEN is scoped to PyAutoBuild only).
+          GH_TOKEN: ${{ secrets.PAT_PYAUTOLABS }}
         run: |
           VERSION="${{ needs.version_number.outputs.version_number }}"
           RESULT="${{ needs.release.result }}"
@@ -456,15 +470,13 @@ jobs:
             echo "::warning::PYAUTO_RELEASE_WEBHOOK_URL not set — skipping announcement"
             exit 0
           fi
-          if [ "$RESULT" = "success" ]; then
-            jq -n --arg v "$VERSION" --arg url "$RUN_URL" \
-              '{text: (":package: *PyAuto \($v) released to PyPI* — autoconf / autofit / autoarray / autogalaxy / autolens.\nUpgrade with: `pip install --upgrade autolens`\n<\($url)|Release run>")}' \
-              > payload.json
-          else
-            jq -n --arg v "$VERSION" --arg r "$RESULT" --arg url "$RUN_URL" \
-              '{text: (":rotating_light: *PyAuto release \($v) did NOT complete* (release job: \($r)).\n<\($url)|Inspect the run> — PyPI may hold a partial set of the five packages; verify before anyone installs.")}' \
-              > payload.json
-          fi
+          # On success this embeds the full PyAutoLens notes + release-page links;
+          # it falls back to the one-line summary if the release can't be fetched.
+          python3 PyAutoBuild/autobuild/slack_release_notes.py \
+            --version "$VERSION" \
+            --result "$RESULT" \
+            --run-url "$RUN_URL" \
+            > payload.json
           curl -sS -X POST \
                -H "Content-Type: application/json" \
                --fail-with-body \
