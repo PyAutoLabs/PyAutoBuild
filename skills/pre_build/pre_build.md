@@ -24,6 +24,10 @@ Check that all required repositories exist under the workspace root:
 - `HowToGalaxy`
 - `HowToLens`
 - `HowToFit`
+- `autofit_workspace_developer`
+- `autolens_workspace_developer`
+- `autolens_assistant`
+- `admin_jammy`
 - `PyAutoBuild`
 
 For each, verify:
@@ -32,7 +36,11 @@ git -C <repo> branch --show-current
 git -C <repo> status --short
 ```
 
-All workspaces must be on `main`. If any are on a feature branch or have uncommitted changes, **stop and warn the user** — the pre-build expects clean `main` branches.
+Every repository that pre-build mutates must be on clean `main`. `admin_jammy`
+is a read-only dependency for `software/ensure_workspace_labels.sh`; verify that
+script exists, but do not require the support repo to be clean. If a mutated
+repo is on a feature branch or has uncommitted changes, **stop and warn the
+user**.
 
 Then ask the user for the minor version number (default: 1).
 
@@ -74,11 +82,11 @@ Pre-Build Complete
 Minor version: <N>
 Workflow dispatched: <URL>
 
-The release workflow is now running. Use /review_release tomorrow
-to assess the results.
+The release workflow is now running. Use the `review-release` skill
+(`/review_release` in Claude) tomorrow to assess the results.
 ```
 
 ## Notes
 
-- The same operation is callable from the shell as `autobuild pre_build <minor>` (or `autobuild-help pre_build` for documentation). Use this skill when you want the Claude validation + summary wrapper; use the bash CLI when you just want to fire off the build.
+- The same operation is callable from the shell as `autobuild pre_build <minor>` (or `autobuild-help pre_build` for documentation). Use this skill when you want the agent validation and summary wrapper; use the bash CLI when you just want to fire off the build.
 - README version-bump is now handled inside `pre_build.sh` (it used to live only in this skill).
