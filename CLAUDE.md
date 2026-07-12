@@ -1,9 +1,5 @@
-# PyAutoBuild — Claude guidance
+@AGENTS.md
 
-Read [`AGENTS.md`](AGENTS.md) in this directory. It is the shared source of
-truth for PyAutoBuild — the executor (Hands) of the PyAuto organism — and for
-the Brain / Heart / Build boundary.
-
-Internals (the `autobuild` CLI, pre-build steps, workspace folder structure,
-config files, `release.yml`) are in [`docs/internals.md`](docs/internals.md) —
-read it when working on the build pipeline itself, not by default.
+<!-- Guidance is agent-agnostic and lives in AGENTS.md (read natively by Codex,
+     Cursor, etc.). Claude Code loads CLAUDE.md, not AGENTS.md, so this file exists
+     only to import that one source. Keep it a pointer — put content in AGENTS.md. -->
