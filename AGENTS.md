@@ -25,6 +25,7 @@ See [`docs/internals.md`](docs/internals.md) for the build pipeline, workspace
 folder structure, config files, and `release.yml` details. Read it when
 changing the pipeline itself, not by default.
 
+<!-- repos_sync:history:begin -->
 ## Never rewrite history
 
 NEVER perform these operations on any repo with a remote:
@@ -44,4 +45,8 @@ If the working tree needs a clean state, the **only** correct sequence is:
     git clean -fd
 
 This applies equally to humans, local Claude Code, cloud Claude agents, Codex,
-and any other agent.
+and any other agent. The "Initial commit — fresh start for AI workflow" pattern
+that appeared independently on origin and local for three workspace repos is
+exactly what this rule prevents — it costs ~40 commits of redundant local work
+every time it happens.
+<!-- repos_sync:history:end -->
