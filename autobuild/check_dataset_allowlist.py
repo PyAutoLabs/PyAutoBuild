@@ -13,9 +13,9 @@ already-tracked file (a tracked file is by definition not ignored) and mishandle
 the parsed allowlist directly.
 
 Allowlist-presence-gated: a workspace whose `.gitignore` has a bare `dataset/`
-rule with no `!dataset/...` re-includes (autofit_workspace, HowTo*) has not yet
-adopted the allowlist regime (Group B, PyAutoBuild#126) — the guard skips it with
-a notice rather than failing, until that repo opts in.
+rule with no `!dataset/...` re-includes has not yet adopted the allowlist regime
+(Group B, PyAutoBuild#126) — the guard skips it with a notice rather than
+failing, until that repo opts in.
 
 Run from a workspace root. Exit 0 = clean/skipped, 1 = violation.
 """
