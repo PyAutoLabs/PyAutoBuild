@@ -1,5 +1,7 @@
 # PyAutoBuild
 
+🧬 **PyAutoScientist → <https://github.com/PyAutoLabs/PyAutoScientist>** — this repo is one organ of the PyAuto organism.
+
 📖 **Full documentation → <https://pyautoscientist.readthedocs.io>** — the whole PyAutoScientist organism, including how to fork and run your own.
 
 The Hands of the PyAuto organism: the executor that packages, tags, builds
