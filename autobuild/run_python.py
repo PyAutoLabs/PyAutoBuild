@@ -45,6 +45,23 @@ if isinstance(no_run_data, dict):
 else:
     no_run_list = no_run_data or []
 
+# advisory.yaml (optional, workspace-only): scripts DECLARED as advisory-tier —
+# known-slow real-search scripts that STILL RUN and report, but whose timeout is
+# advisory (YELLOW) rather than a release-blocking failure. This is what lets
+# mode=release gate on correctness instead of the perf-flake tail; see
+# PyAutoHeart docs/release_validation.md. Same flat-list / keyed-dict shapes and
+# path-matching semantics as no_run.yaml. Absent file => empty list => the
+# runner behaves exactly as before (no advisory tiering).
+advisory_path = WORKSPACE_BUILD_CONFIG / "advisory.yaml"
+advisory_list = []
+if advisory_path.exists():
+    with open(advisory_path) as f:
+        advisory_data = yaml.safe_load(f)
+    if isinstance(advisory_data, dict):
+        advisory_list = advisory_data.get(project, []) or []
+    else:
+        advisory_list = advisory_data or []
+
 # env_vars.yaml: explicit flag > workspace config/build/ > none
 env_config_path = None
 if args.env_config:
@@ -55,6 +72,7 @@ elif (WORKSPACE_BUILD_CONFIG / "env_vars.yaml").exists():
 if __name__ == "__main__":
     report = None
     skip_reasons = None
+    advisory_reasons = None
 
     if args.report_dir:
         from result_collector import RunReport, parse_no_run_reasons
@@ -65,6 +83,8 @@ if __name__ == "__main__":
             run_type="script",
         )
         skip_reasons = parse_no_run_reasons(no_run_path, project)
+        if advisory_path.exists():
+            advisory_reasons = parse_no_run_reasons(advisory_path, project)
 
     env_config = None
     if env_config_path:
@@ -77,6 +97,8 @@ if __name__ == "__main__":
         report=report,
         skip_reasons=skip_reasons,
         env_config=env_config,
+        advisory_list=advisory_list,
+        advisory_reasons=advisory_reasons,
     )
 
     if report is not None:

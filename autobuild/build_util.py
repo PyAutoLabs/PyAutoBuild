@@ -175,7 +175,37 @@ def _find_skip_reason(file: Path, no_run_list: List[str], skip_reasons: dict) ->
     return "No reason documented"
 
 
-def execute_notebook(f, report=None, env=None):
+def _advisory_timeout_result(f, duration, advisory_list, advisory_reasons):
+    """Build a ScriptResult for a timeout, tiered by the workspace advisory list.
+
+    Returns a ``TIMEOUT_ADVISORY`` result (not release-blocking) when the file
+    matches an entry in ``advisory_list`` — a known-slow real-search script the
+    workspace declared in ``config/build/advisory.yaml`` — otherwise a plain
+    ``TIMEOUT``. The script has already run to the cap in both cases; only the
+    pass/fail axis differs.
+    """
+    from result_collector import ScriptResult, Status
+
+    if advisory_list and should_skip(Path(f), advisory_list):
+        reason = _find_skip_reason(Path(f), advisory_list, advisory_reasons or {})
+        print(f"  TIMEOUT-ADVISORY ({duration:.0f}s) [declared slow: {reason}]")
+        return ScriptResult(
+            file=str(f),
+            status=Status.TIMEOUT_ADVISORY,
+            duration_seconds=duration,
+            error_message="Timed out after {:.0f}s (advisory-tier, not release-blocking)".format(duration),
+            skip_reason=reason,
+        )
+    print(f"  TIMEOUT ({duration:.0f}s)")
+    return ScriptResult(
+        file=str(f),
+        status=Status.TIMEOUT,
+        duration_seconds=duration,
+        error_message="Timed out after {:.0f}s".format(duration),
+    )
+
+
+def execute_notebook(f, report=None, env=None, advisory_list=None, advisory_reasons=None):
     print(f"Running <{f}> at {datetime.datetime.now().isoformat()}")
 
     start = time.time()
@@ -199,14 +229,9 @@ def execute_notebook(f, report=None, env=None):
     except subprocess.TimeoutExpired as e:
         duration = time.time() - start
         if report is not None:
-            from result_collector import ScriptResult, Status
-            print(f"  TIMEOUT ({duration:.0f}s)")
-            report.results.append(ScriptResult(
-                file=str(f),
-                status=Status.TIMEOUT,
-                duration_seconds=duration,
-                error_message="Timed out after {:.0f}s".format(duration),
-            ))
+            report.results.append(
+                _advisory_timeout_result(f, duration, advisory_list, advisory_reasons)
+            )
             return
         logging.exception(e)
         sys.exit(1)
@@ -259,6 +284,8 @@ def execute_notebooks_in_folder(
     report=None,
     skip_reasons=None,
     env_config=None,
+    advisory_list=None,
+    advisory_reasons=None,
 ):
     # Infrastructure files — always skip, never report
     infra_skip = ["__init__", "README"]
@@ -291,10 +318,16 @@ def execute_notebooks_in_folder(
         else:
             from env_config import build_env_for_script
             env = build_env_for_script(file, env_config)
-            execute_notebook(file, report=report, env=env)
+            execute_notebook(
+                file,
+                report=report,
+                env=env,
+                advisory_list=advisory_list,
+                advisory_reasons=advisory_reasons,
+            )
 
 
-def execute_script(f, report=None, env=None, extra_args=None):
+def execute_script(f, report=None, env=None, extra_args=None, advisory_list=None, advisory_reasons=None):
     args = [BUILD_PYTHON_INTERPRETER, f]
     if extra_args:
         args.extend(extra_args)
@@ -322,14 +355,9 @@ def execute_script(f, report=None, env=None, extra_args=None):
     except subprocess.TimeoutExpired as e:
         duration = time.time() - start
         if report is not None:
-            from result_collector import ScriptResult, Status
-            print(f"  TIMEOUT ({duration:.0f}s)")
-            report.results.append(ScriptResult(
-                file=str(f),
-                status=Status.TIMEOUT,
-                duration_seconds=duration,
-                error_message="Timed out after {:.0f}s".format(duration),
-            ))
+            report.results.append(
+                _advisory_timeout_result(f, duration, advisory_list, advisory_reasons)
+            )
             return
         logging.exception(e)
         sys.exit(1)
@@ -404,7 +432,15 @@ def find_scripts_in_folder(directory: str) -> List[Path]:
     )
 
 
-def execute_scripts_in_folder(directory, no_run_list=None, report=None, skip_reasons=None, env_config=None):
+def execute_scripts_in_folder(
+    directory,
+    no_run_list=None,
+    report=None,
+    skip_reasons=None,
+    env_config=None,
+    advisory_list=None,
+    advisory_reasons=None,
+):
     no_run_list = no_run_list or []
     # Infrastructure files — always skip, never report
     infra_skip = ["__init__", "README"]
@@ -429,4 +465,11 @@ def execute_scripts_in_folder(directory, no_run_list=None, report=None, skip_rea
             from env_config import build_env_for_script, args_for_script
             env = build_env_for_script(file, env_config)
             extra_args = args_for_script(file, env_config)
-            execute_script(str(file), report=report, env=env, extra_args=extra_args)
+            execute_script(
+                str(file),
+                report=report,
+                env=env,
+                extra_args=extra_args,
+                advisory_list=advisory_list,
+                advisory_reasons=advisory_reasons,
+            )

@@ -11,6 +11,13 @@ class Status(str, Enum):
     FAILED = "failed"
     SKIPPED = "skipped"
     TIMEOUT = "timeout"
+    # A timeout on a script the workspace declared as advisory-tier (a known-slow
+    # real-search script listed in config/build/advisory.yaml). The script STILL
+    # RAN and reported — this is NOT a skip — but its timeout is advisory (YELLOW)
+    # rather than a release-blocking failure, so it does NOT count in
+    # RunReport.has_failures / aggregate `ready`. A timeout on any UNdeclared
+    # script stays a plain TIMEOUT (a fast script timing out is still a signal).
+    TIMEOUT_ADVISORY = "timeout_advisory"
 
 
 @dataclasses.dataclass
@@ -115,6 +122,18 @@ class RunReport:
                     lines.extend(tb_lines)
                     lines.append("```")
                     lines.append("")
+
+        advisory = [r for r in self.results if r.status == Status.TIMEOUT_ADVISORY]
+        if advisory:
+            lines.append("## Advisory-Tier Timeouts (slow real-search; not release-blocking)")
+            lines.append("")
+            lines.append("| Script | Duration | Reason |")
+            lines.append("|--------|----------|--------|")
+            for r in advisory:
+                duration = f"{r.duration_seconds:.1f}s" if r.duration_seconds else ""
+                reason = r.skip_reason or r.error_message or "declared advisory"
+                lines.append(f"| `{Path(r.file).name}` | {duration} | {reason} |")
+            lines.append("")
 
         skipped = [r for r in self.results if r.status == Status.SKIPPED]
         if skipped:

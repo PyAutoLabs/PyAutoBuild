@@ -150,9 +150,16 @@ def aggregate(results_dir: Path) -> dict:
             2,
         )
 
+    # `timeout_advisory` is DELIBERATELY excluded from the failure set: a timeout
+    # on a workspace-declared advisory-tier (known-slow real-search) script is
+    # advisory (YELLOW), not release-blocking, so it must not flip `ready`. A
+    # plain `timeout` (undeclared script) still counts — a fast script timing out
+    # is a real signal. See PyAutoBuild result_collector.Status.TIMEOUT_ADVISORY.
     failures = [r for r in all_results if r.get("status") in ("failed", "timeout")]
     for f in failures:
         f["classification"] = classify_failure(f)
+
+    advisory_timeouts = [r for r in all_results if r.get("status") == "timeout_advisory"]
 
     skipped = [r for r in all_results if r.get("status") == "skipped"]
 
@@ -202,6 +209,7 @@ def aggregate(results_dir: Path) -> dict:
         "slowest": slowest,
         "failures": [_clean_result(f) for f in failures],
         "failure_pr_correlations": pr_correlations,
+        "advisory_timeouts": [_clean_result(a) for a in advisory_timeouts],
         "skipped": [_clean_result(s) for s in skipped],
         "pr_changes": pr_changes,
         "runs": [{k: v for k, v in run.items() if k != "results"} for run in runs],
@@ -291,13 +299,46 @@ def generate_markdown(report: dict) -> str:
         entries=report.get("needs_fix_skips") or [],
     )
 
+    # Advisory-tier timeouts — surfaced loudly near the top so a de-gated
+    # timeout is a visible, tracked backlog item, never silently dropped. These
+    # scripts RAN and timed out, but they are workspace-declared advisory-tier
+    # (config/build/advisory.yaml), so they do NOT block the release verdict;
+    # Heart folds the count into a YELLOW reason. Durable speedups are the
+    # Profiling Agent's job.
+    advisory_timeouts = report.get("advisory_timeouts") or []
+    if advisory_timeouts:
+        lines.append("## Advisory-Tier Timeouts (slow real-search; not release-blocking)")
+        lines.append("")
+        lines.append(
+            f"**{len(advisory_timeouts)} script(s)** timed out but are "
+            "workspace-declared advisory-tier (`config/build/advisory.yaml`), so "
+            "they are reported as YELLOW rather than blocking the release. A "
+            "timeout on any UNdeclared script is still release-blocking."
+        )
+        lines.append("")
+        lines.append("| Workspace | Script | Duration | Reason |")
+        lines.append("|-----------|--------|----------|--------|")
+        for a in sorted(
+            advisory_timeouts, key=lambda x: (x.get("project", ""), x.get("file", ""))
+        ):
+            duration = float(a.get("duration_seconds", 0.0))
+            reason = a.get("skip_reason") or a.get("error_message") or "declared advisory"
+            lines.append(
+                f"| {a.get('project', '')} | `{a.get('file', 'unknown')}` | "
+                f"{duration:.1f}s | {reason} |"
+            )
+        lines.append("")
+
     # Summary
     s = report.get("summary", {})
     lines.append("## Summary")
     lines.append("")
-    lines.append(f"| Passed | Failed | Skipped | Timeout |")
-    lines.append(f"|--------|--------|---------|---------|")
-    lines.append(f"| {s.get('passed', 0)} | {s.get('failed', 0)} | {s.get('skipped', 0)} | {s.get('timeout', 0)} |")
+    lines.append(f"| Passed | Failed | Skipped | Timeout | Timeout (advisory) |")
+    lines.append(f"|--------|--------|---------|---------|--------------------|")
+    lines.append(
+        f"| {s.get('passed', 0)} | {s.get('failed', 0)} | {s.get('skipped', 0)} | "
+        f"{s.get('timeout', 0)} | {s.get('timeout_advisory', 0)} |"
+    )
     lines.append("")
 
     # Per-project breakdown
