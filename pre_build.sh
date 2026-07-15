@@ -72,7 +72,12 @@ run_workspace() {
     # `git add -f` here force-committed simulated datasets that are meant to be
     # generated at runtime via al.util.dataset.should_simulate(); only allowlisted
     # real data may be staged. See PyAutoBuild#126.
-    [ -d dataset ] && git add dataset/
+    # A fully-ignored dataset/ is the normal case, not an error: git add exits
+    # non-zero when every path it matches is ignored, and under `set -e` that
+    # aborts the whole release. Staging nothing is the correct outcome there.
+    if [ -d dataset ]; then
+        git add dataset/ 2>/dev/null || true
+    fi
     for d in config notebooks scripts; do
         [ -d "$d" ] && git add "$d/"
     done
