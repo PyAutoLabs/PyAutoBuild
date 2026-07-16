@@ -55,7 +55,7 @@ bash $HOME/Code/PyAutoLabs/PyAutoBuild/bin/autobuild pre_build <minor_version>
 The script handles every mechanical step of the pre-build flow:
 
 1. Ensures the canonical `pending-release` label exists on each release-window repo.
-2. For every workspace, runs `black .`, runs `generate.py` for projects with a notebook target, and stages only the safe directories (`config/`, `notebooks/`, `scripts/`, `dataset/`, plus `slam_pipeline/` for `autolens_workspace`). Root-level artifacts and README Colab URLs are committed by `release.yml` on the runner, not here.
+2. For every workspace, runs black on the staged dirs (`scripts/`, `slam_pipeline/`), runs `generate.py` for projects with a notebook target, and stages only what the run itself produced (`notebooks/`, `scripts/`, plus `slam_pipeline/` for `autolens_workspace`). It does not stage `dataset/` or `config/` — nothing in the run modifies them, and sweeping pre-existing human work into release commits was the #126 leak mechanism. Root-level artifacts and README Colab URLs are committed by `release.yml` on the runner, not here.
 3. Commits and pushes each workspace (skipping if no changes are staged).
 4. Commits and pushes PyAutoBuild itself.
 5. Dispatches `gh workflow run release.yml --repo PyAutoLabs/PyAutoBuild --field minor_version=<N>`.

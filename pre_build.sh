@@ -46,7 +46,12 @@ run_workspace() {
     cd "$dir"
 
     echo "  Running black..."
-    black .
+    # Format only the dirs this script stages — black'ing "." reformatted files
+    # no staging rule covered (13 files across HowTo*/assistant), leaving them
+    # perpetually dirty-local on every release (#156).
+    for d in scripts slam_pipeline; do
+        if [ -d "$d" ]; then black "$d/"; fi
+    done
 
     if [ "$generate" = "true" ]; then
         echo "  Running generate.py ($project)..."
@@ -59,20 +64,15 @@ run_workspace() {
         exit 1
     }
 
-    echo "  Staging safe directories..."
-    # Honor .gitignore for dataset/ — each workspace ignores dataset/** except a
-    # small allowlist of REAL observational data (un-ignored via ! lines). A prior
-    # `git add -f` here force-committed simulated datasets that are meant to be
-    # generated at runtime via al.util.dataset.should_simulate(); only allowlisted
-    # real data may be staged. See PyAutoBuild#126.
-    # A fully-ignored dataset/ is the normal case, not an error: git add exits
-    # non-zero when every path it matches is ignored, and under `set -e` that
-    # aborts the whole release. Staging nothing is the correct outcome there.
-    if [ -d dataset ]; then
-        git add dataset/ 2>/dev/null || true
-    fi
-    for d in config notebooks scripts; do
-        [ -d "$d" ] && git add "$d/"
+    echo "  Staging what this run produced..."
+    # Stage only what the run itself modifies: black'd scripts and the
+    # generated notebooks. The former dataset/ and config/ adds staged nothing
+    # the run produced — they swept pre-existing human-uncommitted work into
+    # release commits, which is the mechanism that leaked simulated datasets
+    # (#126). Releases require clean mains (Heart gates on it); human work is
+    # committed by humans. See docs/pre_build_failure_audit.md §3/§6 (#156).
+    for d in notebooks scripts; do
+        if [ -d "$d" ]; then git add "$d/"; fi
     done
     if [ "$slam" = "true" ] && [ -d "slam_pipeline" ]; then
         git add slam_pipeline/

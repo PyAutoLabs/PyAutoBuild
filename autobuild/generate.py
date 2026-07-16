@@ -1,5 +1,6 @@
 import os
 import shutil
+import subprocess
 import sys
 import time
 from argparse import ArgumentParser
@@ -104,7 +105,10 @@ if __name__ == "__main__":
         try:
             notebook = build_util.py_to_notebook(start_here_file)
             build_util.inject_colab_setup(notebook, project)
-            os.system(f"git add -f {notebook}")
+            # Checked call, no -f: start_here.ipynb is tracked and unignored in
+            # every workspace that has one (measured, #156); a failure here must
+            # surface, not vanish into an ignored os.system return.
+            subprocess.run(["git", "add", "--", str(notebook)], check=True)
             if report is not None:
                 from result_collector import ScriptResult, Status
                 report.results.append(ScriptResult(
