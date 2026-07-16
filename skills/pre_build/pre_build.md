@@ -27,7 +27,7 @@ Check that all required repositories exist under the workspace root:
 - `autofit_workspace_developer`
 - `autolens_workspace_developer`
 - `autolens_assistant`
-- `admin_jammy`
+- `PyAutoBrain`
 - `PyAutoBuild`
 
 For each, verify:
