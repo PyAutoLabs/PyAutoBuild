@@ -38,7 +38,6 @@ run_workspace() {
     local project="$2"
     local generate="${3:-true}"
     local slam="${4:-false}"
-    local readme_pkg="${5:-}"
     local dir="$PYAUTOBASE/$repo"
 
     echo ""
@@ -48,12 +47,6 @@ run_workspace() {
 
     echo "  Running black..."
     black .
-
-    if [ -n "$readme_pkg" ]; then
-        echo "  Bumping README version → $readme_pkg v$VERSION..."
-        sed -i "s/$readme_pkg v[0-9]\{4\}\.[0-9]*\.[0-9]*\.[0-9]*/$readme_pkg v$VERSION/g" \
-            README.rst README.md 2>/dev/null || true
-    fi
 
     if [ "$generate" = "true" ]; then
         echo "  Running generate.py ($project)..."
@@ -84,8 +77,10 @@ run_workspace() {
     if [ "$slam" = "true" ] && [ -d "slam_pipeline" ]; then
         git add slam_pipeline/
     fi
-    # Stage root-level recognised files only (no output/, output_model/, or stray .fits)
-    git add -- *.py *.md *.txt *.cfg *.ini *.toml *.yml *.yaml LICENSE* requirements* setup* 2>/dev/null || true
+    # Root-level artifacts (llms-full.txt, workspace_index.json, README Colab
+    # URLs) are produced and committed by release.yml's release_workspaces job
+    # on the runner — pre_build deliberately does not stage root files. The
+    # former glob line here was a measured no-op in all 13 repos (#156).
 
     echo "  Committing and pushing..."
     if git diff --cached --quiet; then
@@ -96,27 +91,29 @@ run_workspace() {
     fi
 }
 
-# Positional args: repo project [generate=true] [slam=false] [readme_pkg=""]
-# readme_pkg: when non-empty, the README's "<pkg> vYYYY.M.D.B" pin is bumped to
-# the new VERSION. Empty for workspaces with no README version pin.
+# Positional args: repo project [generate=true] [slam=false]
 # The repo names are checked against PyAutoMind/repos.yaml (the body map) by
 # `repos_sync.py --check`; the flags are Build policy and live only here.
-run_workspace "autofit_workspace"                    "autofit"      true   false  PyAutoFit
-run_workspace "autogalaxy_workspace"                 "autogalaxy"   true   false  PyAutoGalaxy
-run_workspace "autolens_workspace"                   "autolens"     true   true   PyAutoLens
-run_workspace "autofit_workspace_test"               "autofit"      false  false  PyAutoFit
-run_workspace "autogalaxy_workspace_test"            "autogalaxy"   false  false  PyAutoGalaxy
-run_workspace "autolens_workspace_test"              "autolens"     false  false  PyAutoLens
-run_workspace "euclid_strong_lens_modeling_pipeline" ""             false  false  ""
-run_workspace "HowToGalaxy"                          "howtogalaxy"  true   false  PyAutoGalaxy
-run_workspace "HowToLens"                            "howtolens"    true   false  PyAutoLens
-run_workspace "HowToFit"                             "howtofit"     true   false  PyAutoFit
-run_workspace "autofit_workspace_developer"          ""             false  false  ""
-run_workspace "autolens_workspace_developer"         ""             false  false  ""
-# The AI assistant repo. No notebook generation or README pin; release.yml's
+# (The former readme_pkg arg / README version bump was deleted per the audit in
+# docs/pre_build_failure_audit.md: its sed edit was never staged, the runner
+# side was removed under #120, and the pins it targeted are owned by Phase 4 of
+# the build-chain campaign — PyAutoBuild#155/#156.)
+run_workspace "autofit_workspace"                    "autofit"      true   false
+run_workspace "autogalaxy_workspace"                 "autogalaxy"   true   false
+run_workspace "autolens_workspace"                   "autolens"     true   true
+run_workspace "autofit_workspace_test"               "autofit"      false  false
+run_workspace "autogalaxy_workspace_test"            "autogalaxy"   false  false
+run_workspace "autolens_workspace_test"              "autolens"     false  false
+run_workspace "euclid_strong_lens_modeling_pipeline" ""             false  false
+run_workspace "HowToGalaxy"                          "howtogalaxy"  true   false
+run_workspace "HowToLens"                            "howtolens"    true   false
+run_workspace "HowToFit"                             "howtofit"     true   false
+run_workspace "autofit_workspace_developer"          ""             false  false
+run_workspace "autolens_workspace_developer"         ""             false  false
+# The AI assistant repo. No notebook generation; release.yml's
 # release_workspaces job stamps its workspace version and regenerates
 # wiki/core/api_audit_baseline.json against the released wheels.
-run_workspace "autolens_assistant"                   "autolens"     false  false  ""
+run_workspace "autolens_assistant"                   "autolens"     false  false
 
 # Commit and push PyAutoBuild itself
 echo ""

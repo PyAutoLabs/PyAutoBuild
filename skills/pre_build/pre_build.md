@@ -55,7 +55,7 @@ bash $HOME/Code/PyAutoLabs/PyAutoBuild/bin/autobuild pre_build <minor_version>
 The script handles every mechanical step of the pre-build flow:
 
 1. Ensures the canonical `pending-release` label exists on each release-window repo.
-2. For every workspace, runs `black .`, bumps the README version pin (`<Package> vYYYY.M.D.<minor>`) where applicable, runs `generate.py` for projects with a notebook target, and stages only the safe directories (`config/`, `notebooks/`, `scripts/`, `dataset/`, plus `slam_pipeline/` for `autolens_workspace`).
+2. For every workspace, runs `black .`, runs `generate.py` for projects with a notebook target, and stages only the safe directories (`config/`, `notebooks/`, `scripts/`, `dataset/`, plus `slam_pipeline/` for `autolens_workspace`). Root-level artifacts and README Colab URLs are committed by `release.yml` on the runner, not here.
 3. Commits and pushes each workspace (skipping if no changes are staged).
 4. Commits and pushes PyAutoBuild itself.
 5. Dispatches `gh workflow run release.yml --repo PyAutoLabs/PyAutoBuild --field minor_version=<N>`.
@@ -89,4 +89,4 @@ The release workflow is now running. Use the `review-release` skill
 ## Notes
 
 - The same operation is callable from the shell as `autobuild pre_build <minor>` (or `autobuild-help pre_build` for documentation). Use this skill when you want the agent validation and summary wrapper; use the bash CLI when you just want to fire off the build.
-- README version-bump is now handled inside `pre_build.sh` (it used to live only in this skill).
+- There is no README version-bump step: the audit (`docs/pre_build_failure_audit.md`, #156) found the old local sed's output was never staged and the runner-side step was removed under #120 — README pin ownership is a Phase 4 decision of the build-chain campaign (#155).

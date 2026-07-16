@@ -67,12 +67,12 @@ Each workspace repo (`autofit_workspace`, `autogalaxy_workspace`, `autolens_work
 | Folder / file | autofit | autogalaxy | autolens | Notes |
 |---|---|---|---|---|
 | `config/` | yes | yes | yes | PyAutoConf config files |
-| `dataset/` | yes | yes | yes | Input data; force-added with `git add -f` |
+| `dataset/` | yes | yes | yes | Allowlisted real observational data only; simulated datasets are never committed (#126/#150) |
 | `notebooks/` | yes | yes | yes | Generated from `scripts/` by `generate.py` |
 | `scripts/` | yes | yes | yes | Source Python scripts |
 | `slam_pipeline/` | no | no | yes | autolens only |
 | `output/` | — | — | — | **Always empty** — kept under git with a `.gitignore` only |
-| Root-level files | yes | yes | yes | `README.md`, `setup.py`, `pyproject.toml`, `requirements.txt`, `*.cfg`, `*.ini`, `*.yml`, `*.yaml`, `LICENSE*` |
+| Root-level files | yes | yes | yes | `README.md`, `llms-full.txt`, `workspace_index.json`, `requirements.txt`, `LICENSE*` — committed by `release.yml` on the runner, not by `pre_build.sh` (#156) |
 
 ### Paths that must NEVER be committed
 
