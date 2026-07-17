@@ -63,6 +63,7 @@ if __name__ == "__main__":
             project=project,
             directory=directory,
             run_type="script",
+            env_profile=(env_config_path.name if env_config_path else "none"),
         )
         skip_reasons = parse_no_run_reasons(no_run_path, project)
 

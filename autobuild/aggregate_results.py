@@ -106,6 +106,29 @@ def correlate_failures_with_prs(failures: list, prs: list) -> dict:
 SLOWEST_TOP_N = 25
 
 
+def _surface(runs: list, script_count: int) -> dict:
+    """What this run actually measured — the report's own denominator.
+
+    A gate needs a stable denominator: on 2026-07-15 a test_run leg's "3
+    failed" and a later "30 failed" were compared as a regression when the two
+    runs had measured different surfaces (different projects, scripts vs
+    scripts+notebooks). Nothing in the report said so, because the report never
+    stated its surface. It does now (PyAutoHeart#83 §5.3) — consumers compare
+    surfaces before comparing counts.
+    """
+    return {
+        "projects": sorted({r.get("project", "") for r in runs if r.get("project")}),
+        "shards": sorted(
+            f"{r.get('project', '?')}/{r.get('directory', '?')}" for r in runs
+        ),
+        "run_types": sorted({r.get("run_type", "") for r in runs if r.get("run_type")}),
+        "env_profiles": sorted(
+            {r.get("env_profile", "") for r in runs if r.get("env_profile")}
+        ),
+        "script_count": script_count,
+    }
+
+
 def aggregate(results_dir: Path) -> dict:
     """Read all JSON result files and produce a consolidated report."""
     json_files = sorted(results_dir.glob("**/*.json"))
@@ -119,6 +142,7 @@ def aggregate(results_dir: Path) -> dict:
             "slowest": [],
             "run_path": str(results_dir),
             "run_label": results_dir.name,
+            "surface": _surface([], 0),
         }
 
     runs = []
@@ -195,6 +219,7 @@ def aggregate(results_dir: Path) -> dict:
         "ready": not has_failures,
         "run_path": str(results_dir),
         "run_label": results_dir.name,
+        "surface": _surface(runs, len(all_results)),
         "total_duration_seconds": total_duration,
         "summary": summary,
         "per_project": per_project,

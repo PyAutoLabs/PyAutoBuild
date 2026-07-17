@@ -44,6 +44,10 @@ class RunReport:
     project: str
     directory: str
     run_type: str  # "script", "notebook", or "generate"
+    # Which env profile the scripts actually ran under ("env_vars.yaml",
+    # "env_vars_release.yaml", "none"). Recorded so a report states the surface
+    # it measured — two runs are otherwise incomparable (PyAutoHeart#83 §5.3).
+    env_profile: str = "unknown"
     results: List[ScriptResult] = dataclasses.field(default_factory=list)
     started_at: str = dataclasses.field(
         default_factory=lambda: datetime.datetime.now().isoformat()
@@ -72,6 +76,7 @@ class RunReport:
             "project": self.project,
             "directory": self.directory,
             "run_type": self.run_type,
+            "env_profile": self.env_profile,
             "started_at": self.started_at,
             "completed_at": self.completed_at,
             "summary": self.summary,

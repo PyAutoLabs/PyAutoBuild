@@ -118,3 +118,22 @@ def test_parse_no_run_reasons_empty_project():
 
     reasons = parse_no_run_reasons(config_path, "autolens_test")
     assert reasons == {}
+
+
+# --- surface recording (PyAutoHeart#83 §5.3) ----------------------------------
+
+def test_run_report_records_env_profile():
+    from result_collector import RunReport
+    r = RunReport(
+        project="autolens",
+        directory="imaging",
+        run_type="script",
+        env_profile="env_vars_release.yaml",
+    )
+    assert r.to_dict()["env_profile"] == "env_vars_release.yaml"
+
+
+def test_run_report_env_profile_defaults_to_unknown():
+    from result_collector import RunReport
+    r = RunReport(project="p", directory="d", run_type="script")
+    assert r.to_dict()["env_profile"] == "unknown"
