@@ -110,7 +110,7 @@ jobs:
         steps:
         - uses: actions/checkout@v2
           with:
-              path: PyAutoBuild
+              path: PyAutoHands
         - name: Checkout
           uses: actions/checkout@v2
           with:
@@ -378,7 +378,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
       with:
-          path: PyAutoBuild
+          path: PyAutoHands
     - name: Checkout
       run: |
         PAT="${{ secrets[matrix.project.pat] }}"
@@ -442,7 +442,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          path: PyAutoBuild
+          path: PyAutoHands
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
@@ -451,7 +451,7 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.PYAUTO_RELEASE_WEBHOOK_URL }}
           # Cross-repo PAT so `gh release view` can read the PyAutoLens release
-          # (the default GITHUB_TOKEN is scoped to PyAutoBuild only).
+          # (the default GITHUB_TOKEN is scoped to PyAutoHands only).
           GH_TOKEN: ${{ secrets.PAT_PYAUTOLABS }}
         run: |
           VERSION="${{ needs.version_number.outputs.version_number }}"
@@ -463,7 +463,7 @@ jobs:
           fi
           # On success this embeds the full PyAutoLens notes + release-page links;
           # it falls back to the one-line summary if the release can't be fetched.
-          python3 PyAutoBuild/autobuild/slack_release_notes.py \
+          python3 PyAutoHands/autobuild/slack_release_notes.py \
             --version "$VERSION" \
             --result "$RESULT" \
             --run-url "$RUN_URL" \
@@ -496,7 +496,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
       with:
-        path: PyAutoBuild
+        path: PyAutoHands
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
@@ -505,7 +505,7 @@ jobs:
       env:
         GH_TOKEN: ${{ secrets[matrix.project.pat] }}
       run: |
-        python3 PyAutoBuild/autobuild/generate_release_notes.py \
+        python3 PyAutoHands/autobuild/generate_release_notes.py \
           --version "${{ needs.version_number.outputs.version_number }}" \
           --repo "${{ matrix.project.repo }}"
 
@@ -580,7 +580,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
       with:
-          path: PyAutoBuild
+          path: PyAutoHands
     - name: Checkout
       run: |
         git clone -b main "https://$PAT@github.com/${{ matrix.workspace.repository }}.git" workspace
@@ -598,8 +598,8 @@ jobs:
     - name: Update jupyter notebooks
       if: "${{ matrix.workspace.generate_notebooks == true }}"
       run: |
-        export PYTHONPATH=$PYTHONPATH:$(pwd)/PyAutoBuild
-        AUTOBUILD_PATH="$(pwd)/PyAutoBuild/autobuild"
+        export PYTHONPATH=$PYTHONPATH:$(pwd)/PyAutoHands
+        AUTOBUILD_PATH="$(pwd)/PyAutoHands/autobuild"
         pushd workspace
         python3 "$AUTOBUILD_PATH/generate.py" ${{ matrix.workspace.name }}
         # Stage exactly what generate.py produces: the notebooks tree, the
@@ -655,7 +655,7 @@ jobs:
       run: |
         VERSION="${{ needs.version_number.outputs.version_number }}"
         pushd workspace
-        bash "$GITHUB_WORKSPACE/PyAutoBuild/autobuild/bump_colab_urls.sh" "$VERSION"
+        bash "$GITHUB_WORKSPACE/PyAutoHands/autobuild/bump_colab_urls.sh" "$VERSION"
         # Stage tracked-file modifications only — exactly what the URL bumper
         # can produce (it rewrites existing *.rst/*.md/*.ipynb/*.py in place).
         # The former `git add -A` also swept unrelated leftovers into this
@@ -690,7 +690,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
       with:
-        path: PyAutoBuild
+        path: PyAutoHands
     - name: Checkout library
       run: |
         git clone -b main "https://$PAT@github.com/${{ matrix.library }}.git" library
@@ -702,7 +702,7 @@ jobs:
       run: |
         VERSION="${{ needs.version_number.outputs.version_number }}"
         pushd library
-        bash "$GITHUB_WORKSPACE/PyAutoBuild/autobuild/bump_colab_urls.sh" "$VERSION"
+        bash "$GITHUB_WORKSPACE/PyAutoHands/autobuild/bump_colab_urls.sh" "$VERSION"
         if ! git diff --quiet; then
           # Tracked modifications only — the bumper rewrites existing files in
           # place; `git add -A` would sweep any unrelated leftovers (#156 step 2).
@@ -714,7 +714,7 @@ jobs:
   # ---------------------------------------------------------------------------
   # Wiki-currency check (autolens_assistant).
   #
-  # PyAutoBuild only orchestrates and reports here — it calls into the assistant's
+  # PyAutoHands only orchestrates and reports here — it calls into the assistant's
   # reusable workflow, which is the single home of the currency rules (symbol audit,
   # idiom deny-list, provenance). No wiki-currency rule is reimplemented in this repo.
   #
@@ -765,7 +765,7 @@ jobs:
 
   # ---------------------------------------------------------------------------
   # Wiki-currency check (autofit_assistant) — same contract as the autolens pair
-  # above: PyAutoBuild orchestrates and reports; the assistant's reusable workflow
+  # above: PyAutoHands orchestrates and reports; the assistant's reusable workflow
   # is the single home of the rules. Its drift artifact is named
   # wiki-drift-report-autofit because upload-artifact@v4 names are unique per run
   # and the autolens check in this same run already claims wiki-drift-report.

@@ -24,11 +24,11 @@ Two independent checks, runnable locally or in CI:
 This script is intentionally repo-agnostic: it hardcodes no repository name and
 operates on the workspace given by ``--root`` (default: the current working
 directory), so the autolens / galaxy / fit workspaces all share this one copy.
-It lives in PyAutoBuild and is invoked by the reusable ``navigator_check``
+It lives in PyAutoHands and is invoked by the reusable ``navigator_check``
 workflow; run it locally against a workspace checkout with::
 
-    python /path/to/PyAutoBuild/autobuild/check_navigator.py --root /path/to/workspace
-    python /path/to/PyAutoBuild/autobuild/check_navigator.py --root /path/to/workspace --banners=warn
+    python /path/to/PyAutoHands/autobuild/check_navigator.py --root /path/to/workspace
+    python /path/to/PyAutoHands/autobuild/check_navigator.py --root /path/to/workspace --banners=warn
 
 An optional ignore file (default ``.navigator_check_ignore``) lists paths or
 globs (one per line, ``#`` comments allowed) that are exempt from BOTH checks.

@@ -2,7 +2,7 @@
 
 Phase 0 of the autobuild-release-prep migration moved per-project build config
 (no_run, env_vars, copy_files, visualise_notebooks) down to each workspace's
-config/build/ directory. PyAutoBuild's own autobuild/config/ retains keyed-dict
+config/build/ directory. PyAutoHands's own autobuild/config/ retains keyed-dict
 fallbacks for legacy workspaces only. These tests verify that a workspace
 copy always wins when present.
 """

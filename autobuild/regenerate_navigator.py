@@ -9,7 +9,7 @@ directory*, producing ``llms-full.txt`` and ``workspace_index.json`` *without*
 running the full notebook generation and *without* needing the science stack
 (only ``pyyaml``).
 
-It lives beside ``navigator.py`` in PyAutoBuild, so it no longer needs the
+It lives beside ``navigator.py`` in PyAutoHands, so it no longer needs the
 ``PYAUTOBUILD_DIR`` path plumbing the old per-workspace shim used — it imports
 ``navigator`` from its own directory. The generator project is taken from the
 first CLI argument, falling back to the ``NAVIGATOR_PROJECT`` environment
@@ -18,8 +18,8 @@ variable, then ``autolens``.
 Run from the workspace root (CWD is the workspace to catalogue, not this
 package)::
 
-    python /path/to/PyAutoBuild/autobuild/regenerate_navigator.py autogalaxy
-    NAVIGATOR_PROJECT=autofit python /path/to/PyAutoBuild/autobuild/regenerate_navigator.py
+    python /path/to/PyAutoHands/autobuild/regenerate_navigator.py autogalaxy
+    NAVIGATOR_PROJECT=autofit python /path/to/PyAutoHands/autobuild/regenerate_navigator.py
 """
 
 import os

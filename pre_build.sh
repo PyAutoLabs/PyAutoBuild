@@ -1,6 +1,6 @@
 #!/bin/bash
 # Pre-build script: run black + generate notebooks + git commit & push
-# for all workspace repos, then commit & push PyAutoBuild, then trigger
+# for all workspace repos, then commit & push PyAutoHands, then trigger
 # the GitHub Actions release workflow.
 #
 # Usage: bash pre_build.sh [minor_version]
@@ -18,7 +18,7 @@ MINOR_VERSION="${1:-1}"
 # so pre_build.sh works from any checkout — Linux, WSL, anywhere.
 SELF="$(readlink -f "$0")"
 PYAUTOBASE="$(cd "$(dirname "$SELF")/.." && pwd)"
-AUTOBUILD="$PYAUTOBASE/PyAutoBuild/autobuild"
+AUTOBUILD="$PYAUTOBASE/PyAutoHands/autobuild"
 PYTHONPATH_EXTRA="$AUTOBUILD"
 
 # YYYY.M.D.<minor> — used to bump README version pins. %-m / %-d strip
@@ -115,10 +115,10 @@ run_workspace "autolens_workspace_developer"         ""             false  false
 # wiki/core/api_audit_baseline.json against the released wheels.
 run_workspace "autolens_assistant"                   "autolens"     false  false
 
-# Commit and push PyAutoBuild itself
+# Commit and push PyAutoHands itself
 echo ""
-echo "=== PyAutoBuild ==="
-cd "$PYAUTOBASE/PyAutoBuild"
+echo "=== PyAutoHands ==="
+cd "$PYAUTOBASE/PyAutoHands"
 git add -A
 if git diff --cached --quiet; then
     echo "  No changes to commit."
@@ -128,7 +128,7 @@ else
 fi
 
 # Release readiness (version skew, including the version.txt-ahead crash that
-# used to be checked here) is now Heart's job, not Build's: PyAutoBuild is a
+# used to be checked here) is now Heart's job, not Build's: PyAutoHands is a
 # pure executor. The release agent gates on `pyauto-heart readiness` before
 # invoking this script; a human running pre_build directly is trusted to have
 # checked `pyauto-heart readiness` themselves.
@@ -137,9 +137,9 @@ fi
 echo ""
 echo "=== Triggering release workflow (minor_version=$MINOR_VERSION) ==="
 gh workflow run release.yml \
-    --repo PyAutoLabs/PyAutoBuild \
+    --repo PyAutoLabs/PyAutoHands \
     --field minor_version="$MINOR_VERSION"
 
 echo ""
 echo "Pre-build complete. Workflow dispatched."
-echo "Track it at: https://github.com/PyAutoLabs/PyAutoBuild/actions"
+echo "Track it at: https://github.com/PyAutoLabs/PyAutoHands/actions"

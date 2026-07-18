@@ -6,7 +6,7 @@ name: Navigator Check (reusable)
 # logic) lives here so the three workspaces share one copy.
 #
 # Both jobs check out the *caller* workspace (default checkout) plus this repo
-# (PyAutoBuild), because the navigator entrypoints now live in PyAutoBuild.
+# (PyAutoHands), because the navigator entrypoints now live in PyAutoHands.
 
 on:
   workflow_call:
@@ -28,11 +28,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: workspace
-      - name: Checkout PyAutoBuild
+      - name: Checkout PyAutoHands
         uses: actions/checkout@v4
         with:
-          repository: PyAutoLabs/PyAutoBuild
-          path: PyAutoBuild
+          repository: PyAutoLabs/PyAutoHands
+          path: PyAutoHands
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -40,7 +40,7 @@ jobs:
       - name: Install dependencies
         run: pip install --quiet pyyaml
       - name: Run navigator checker (paths hard, banners fail)
-        run: python PyAutoBuild/autobuild/check_navigator.py --root workspace --banners=fail
+        run: python PyAutoHands/autobuild/check_navigator.py --root workspace --banners=fail
 
   staleness:
     name: Catalogue staleness
@@ -50,11 +50,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: workspace
-      - name: Checkout PyAutoBuild
+      - name: Checkout PyAutoHands
         uses: actions/checkout@v4
         with:
-          repository: PyAutoLabs/PyAutoBuild
-          path: PyAutoBuild
+          repository: PyAutoLabs/PyAutoHands
+          path: PyAutoHands
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -65,17 +65,17 @@ jobs:
         run: |
           cd workspace
           echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> "$GITHUB_OUTPUT"
-      - name: Match PyAutoBuild branch
+      - name: Match PyAutoHands branch
         shell: bash
         run: |
           BRANCH="${{ steps.extract_branch.outputs.branch }}"
-          pushd PyAutoBuild
+          pushd PyAutoHands
           if [[ -n "$(git ls-remote --heads origin "$BRANCH")" ]]; then
-            echo "Branch $BRANCH exists in PyAutoBuild — checking out"
+            echo "Branch $BRANCH exists in PyAutoHands — checking out"
             git fetch origin "$BRANCH"
             git checkout "$BRANCH"
           else
-            echo "Branch $BRANCH not in PyAutoBuild — staying on default branch"
+            echo "Branch $BRANCH not in PyAutoHands — staying on default branch"
           fi
           popd
       - name: Install dependencies
@@ -85,7 +85,7 @@ jobs:
           NAVIGATOR_PROJECT: ${{ inputs.project }}
         run: |
           cd workspace
-          python ../PyAutoBuild/autobuild/regenerate_navigator.py "$NAVIGATOR_PROJECT"
+          python ../PyAutoHands/autobuild/regenerate_navigator.py "$NAVIGATOR_PROJECT"
       - name: Fail if catalogue drifted from scripts
         shell: bash
         run: |

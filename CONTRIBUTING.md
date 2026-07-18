@@ -1,6 +1,6 @@
 # Contributing
 
-PyAutoBuild is an organ of **PyAutoScientist** — a living reference implementation
+PyAutoHands (formerly PyAutoBuild) is an organ of **PyAutoScientist** — a living reference implementation
 that is the maintainer's daily working system. `main` moves fast and
 carries **no compatibility promises**: adopt by fork-and-pull (confining
 your diff to the declared config surfaces), never by tracking, and pin what

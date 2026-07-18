@@ -1,14 +1,14 @@
-# PyAutoBuild — internals
+# PyAutoHands — internals
 
 Operational detail for working **inside** this repo: the `autobuild` CLI, the
 pre-build steps, workspace folder structure, config files, and `release.yml`.
-What PyAutoBuild *is* and the Brain/Heart/Build boundary live in
+What PyAutoHands *is* and the Brain/Heart/Build boundary live in
 [`AGENTS.md`](../AGENTS.md) — read that first; read this only when changing the
 build pipeline itself.
 
 ## What the pipeline automates
 
-PyAutoBuild runs **no** release-readiness checks of its own (that is
+PyAutoHands runs **no** release-readiness checks of its own (that is
 PyAutoHeart's job). It automates:
 1. Building and releasing packages to TestPyPI, then PyPI
 2. Running workspace Python scripts (integration tests)
@@ -24,7 +24,7 @@ Every operation in this repo is invokable from the shell via the `autobuild` dis
 Recommended alias for `~/.bashrc`:
 
 ```bash
-alias autobuild-help='$HOME/Code/PyAutoLabs/PyAutoBuild/bin/autobuild help'
+alias autobuild-help='$HOME/Code/PyAutoLabs/PyAutoHands/bin/autobuild help'
 ```
 
 The dispatcher routes to the underlying bash script directly, or to the Python tool with `PYTHONPATH` already set so the internal `build_util` / `result_collector` / `env_config` imports resolve. The same operations remain callable as Claude skills (`/pre_build`, `/verify_install`, `/review_release`); use the skill when you want the validation + summary wrapper, the CLI when you just want to fire the underlying tool.
@@ -34,9 +34,9 @@ The dispatcher routes to the underlying bash script directly, or to the Python t
 Before triggering a build, run:
 
 ```bash
-bash $HOME/Code/PyAutoLabs/PyAutoBuild/bin/autobuild pre_build [minor_version]
+bash $HOME/Code/PyAutoLabs/PyAutoHands/bin/autobuild pre_build [minor_version]
 # minor_version defaults to 1
-# (equivalent to: bash $HOME/Code/PyAutoLabs/PyAutoBuild/pre_build.sh [minor_version])
+# (equivalent to: bash $HOME/Code/PyAutoLabs/PyAutoHands/pre_build.sh [minor_version])
 ```
 
 This script does the following for each repo:
@@ -56,9 +56,9 @@ This script does the following for each repo:
 
 Before the per-repo loop, `pre_build.sh` invokes `PyAutoBrain/bin/ensure_workspace_labels.sh` to assert the canonical `pending-release` label across every release-window repo (idempotent — a no-op when nothing has drifted).
 
-Release-readiness checking is **not** Build's job — PyAutoBuild is a pure executor. The version-skew check that used to live here (`verify_workspace_versions.sh`, a fail-fast guard against a workspace pinned ahead of its installed library, or a `config/general.yaml` ↔ `version.txt` disagreement) now lives in **PyAutoHeart** as the `version_skew` check feeding `pyauto-heart readiness`. The PyAutoBrain release agent gates on `pyauto-heart readiness` before invoking `pre_build`; a human running `pre_build` directly is trusted to have checked readiness first. See PyAutoHeart for the resolution precedence (`config/general.yaml:version.workspace_version`, then `version.txt`) — mirroring `autoconf.workspace.check_version`. Since PyAutoBuild#120, releases no longer write workspace version pins or commit `__init__.py` stamps back to library mains (wheels are stamped at build time; tags are the release anchor): the runtime check enforces a compatibility **floor** (`version.minimum_library_version`, bumped deliberately — PyAutoConf#118), and Heart's `version_skew` check needs a follow-up rework to compare floors against release tags rather than stamp-vs-pin.
+Release-readiness checking is **not** Build's job — PyAutoHands is a pure executor. The version-skew check that used to live here (`verify_workspace_versions.sh`, a fail-fast guard against a workspace pinned ahead of its installed library, or a `config/general.yaml` ↔ `version.txt` disagreement) now lives in **PyAutoHeart** as the `version_skew` check feeding `pyauto-heart readiness`. The PyAutoBrain release agent gates on `pyauto-heart readiness` before invoking `pre_build`; a human running `pre_build` directly is trusted to have checked readiness first. See PyAutoHeart for the resolution precedence (`config/general.yaml:version.workspace_version`, then `version.txt`) — mirroring `autoconf.workspace.check_version`. Since PyAutoBuild#120, releases no longer write workspace version pins or commit `__init__.py` stamps back to library mains (wheels are stamped at build time; tags are the release anchor): the runtime check enforces a compatibility **floor** (`version.minimum_library_version`, bumped deliberately — PyAutoConf#118), and Heart's `version_skew` check needs a follow-up rework to compare floors against release tags rather than stamp-vs-pin.
 
-`generate.py` is run from the workspace root with `PYTHONPATH` pointing at `PyAutoBuild/autobuild/`. Only specific safe directories are committed — never `output/`, `output_model/`, or run-generated artefacts. After all workspaces are done, PyAutoBuild itself is committed and pushed, then `gh workflow run release.yml` dispatches the GitHub Actions release.
+`generate.py` is run from the workspace root with `PYTHONPATH` pointing at `PyAutoHands/autobuild/`. Only specific safe directories are committed — never `output/`, `output_model/`, or run-generated artefacts. After all workspaces are done, PyAutoHands itself is committed and pushed, then `gh workflow run release.yml` dispatches the GitHub Actions release.
 
 ## Workspace Folder Structure
 
@@ -103,7 +103,7 @@ This workspace is often imported from `/mnt/c/...` and Codex may not be able to 
 
 ## Key Scripts
 
-All scripts in `autobuild/` are run from within a checked-out workspace directory (not from this repo root). They rely on `PYTHONPATH` including the PyAutoBuild directory.
+All scripts in `autobuild/` are run from within a checked-out workspace directory (not from this repo root). They rely on `PYTHONPATH` including the PyAutoHands directory.
 
 - **`run_python.py <project> <directory>`** — Executes Python scripts in a workspace folder, skipping files listed in `config/no_run.yaml`
 - **`run.py <project> <directory> [--visualise]`** — Executes Jupyter notebooks in a workspace folder, skipping files in `config/no_run.yaml`

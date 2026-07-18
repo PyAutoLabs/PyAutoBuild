@@ -1,7 +1,15 @@
-# PyAutoBuild — Agent Guidance
+# PyAutoHands — Agent Guidance
 
-PyAutoBuild is the **executor** of the PyAuto release ecosystem: packaging,
-tagging, notebook generation, and PyPI publication via `release.yml`. It runs no
+> **Formerly PyAutoBuild.** This repository is being renamed PyAutoBuild →
+> PyAutoHands (see [MIGRATION.md](MIGRATION.md)). The `autobuild` CLI and Python
+> package keep their names for now; only the repository/branding changes. The
+> "Build" organ shorthand and the canonical `Brain → Heart (gate) → Build
+> (execute)` call chain are updated at their source (`PyAutoBrain/ORGANISM.md`)
+> in a later phase.
+
+PyAutoHands is the **executor** (the Hands) of the PyAuto release ecosystem:
+packaging, tagging, notebook generation, and PyPI publication via `release.yml`.
+**PyAutoHands executes work on behalf of PyAutoBrain.** It runs no
 release-readiness checks of its own — that is PyAutoHeart's job.
 
 ## The boundary

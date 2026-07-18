@@ -1,7 +1,7 @@
 """Tests for the persistent timestamped-run layout in run_all.py.
 
 The release-prep flow keeps every run on disk under
-PyAutoBuild/test_results/runs/<UTC-timestamp>/ and updates a `latest`
+PyAutoHands/test_results/runs/<UTC-timestamp>/ and updates a `latest`
 symlink on success. These tests use the helper functions directly so
 we don't have to spawn subprocesses.
 """

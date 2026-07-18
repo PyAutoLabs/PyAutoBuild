@@ -1,16 +1,22 @@
 <p align="center">
-  <img src="logo.png" alt="PyAutoBuild" width="400">
+  <img src="logo.png" alt="PyAutoHands" width="400">
 </p>
 
-# PyAutoBuild
+# PyAutoHands
+
+> **Formerly PyAutoBuild.** The repository is being renamed PyAutoBuild →
+> PyAutoHands; see [MIGRATION.md](MIGRATION.md). The `autobuild` command and
+> Python package keep their names for now — only the repository and its
+> branding change.
 
 🧬 **PyAutoScientist → <https://github.com/PyAutoLabs/PyAutoScientist>** — this repo is one organ of the PyAuto organism.
 
 📖 **Full documentation → <https://pyautoscientist.readthedocs.io>** — the whole PyAutoScientist organism, including how to fork and run your own.
 
-The Hands of the PyAuto organism: the executor that packages, tags, builds
-notebooks, and releases the PyAuto libraries (PyAutoConf, PyAutoFit,
-PyAutoArray, PyAutoGalaxy, PyAutoLens) and their workspaces to PyPI. It
+PyAutoHands is the **Hands** of the PyAuto organism: the executor that packages,
+tags, builds notebooks, and releases the PyAuto libraries (PyAutoConf, PyAutoFit,
+PyAutoArray, PyAutoGalaxy, PyAutoLens) and their workspaces to PyPI. **PyAutoHands
+executes work on behalf of PyAutoBrain** — the Brain decides, the Hands do. It
 runs no readiness checks and makes no gate decisions — those belong to
 [PyAutoHeart](https://github.com/PyAutoLabs/PyAutoHeart), whose verdict the
 [PyAutoBrain](https://github.com/PyAutoLabs/PyAutoBrain) release agent

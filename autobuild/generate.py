@@ -24,7 +24,11 @@ parser.add_argument(
 args = parser.parse_args()
 
 WORKSPACE_PATH = Path.cwd()
-CONFIG_PATH = WORKSPACE_PATH.parent / "PyAutoBuild/autobuild/config"
+# Resolve the fallback config dir relative to this file (it lives beside it at
+# autobuild/config/) rather than hardcoding the sibling build-repo directory
+# name — so it works whether the repo is checked out as PyAutoHands or (via the
+# rename redirect / an un-migrated reusable workflow) PyAutoBuild.
+CONFIG_PATH = Path(__file__).resolve().parent / "config"
 WORKSPACE_BUILD_CONFIG = WORKSPACE_PATH / "config" / "build"
 
 project = args.project

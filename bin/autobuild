@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# autobuild — unified bash CLI for PyAutoBuild operations.
+# autobuild — unified bash CLI for PyAutoHands operations.
 #
 # Run `autobuild help` for the list of subcommands.
 # Run `autobuild help <subcommand>` for full details on one subcommand.
 #
 # Recommended alias for ~/.bashrc:
-#   alias autobuild-help='$HOME/Code/PyAutoLabs/PyAutoBuild/bin/autobuild help'
+#   alias autobuild-help='$HOME/Code/PyAutoLabs/PyAutoHands/bin/autobuild help'
 
 set -u
 
@@ -94,7 +94,7 @@ help_pre_build() {
 autobuild pre_build [minor_version] [skip_release]
 
 Run black + generate notebooks + commit & push for every workspace repo,
-then commit & push PyAutoBuild itself, then dispatch the GitHub Actions
+then commit & push PyAutoHands itself, then dispatch the GitHub Actions
 release.yml workflow.
 
 For each workspace with a README package mapping (PyAutoFit / PyAutoGalaxy
@@ -119,7 +119,7 @@ help_verify_install() {
 autobuild verify_install [CHECKS...] [--version VERSION] [--keep]
 
 Shim → `pyauto-heart verify_install`. Release-readiness checking is Heart's
-job now (PyAutoBuild is a pure executor), so this delegates to PyAutoHeart,
+job now (PyAutoHands is a pure executor), so this delegates to PyAutoHeart,
 which owns the install-path checks (pip & conda, A–E) and writes the JSON
 sidecar that `pyauto-heart readiness` consumes.
 
@@ -137,7 +137,7 @@ help_url_check() {
 autobuild url_check [directory]
 
 Shim → `pyauto-heart url_check`. URL hygiene is PyAutoHeart's job now
-(PyAutoBuild is a pure executor). Scans rst/md/ipynb/py under <directory>
+(PyAutoHands is a pure executor). Scans rst/md/ipynb/py under <directory>
 (default cwd) for forbidden Binder/Colab/owner URL patterns.
 
 The ecosystem-wide sweep runs from PyAutoHeart's central url-check.yml
@@ -185,7 +185,7 @@ Arguments:
   project        Project name (e.g. autofit, autogalaxy, autolens, howtolens)
   --report-dir   Directory to write structured JSON generation results to
 
-Run from the workspace root, not from PyAutoBuild.
+Run from the workspace root, not from PyAutoHands.
 EOF
 }
 cmd_generate() {
@@ -248,7 +248,7 @@ Arguments (positional):
 
 Options:
   --results-dir    Override default output dir (default:
-                   PyAutoBuild/test_results/runs/<UTC-timestamp>/, with a
+                   PyAutoHands/test_results/runs/<UTC-timestamp>/, with a
                    sibling `latest` symlink)
   --timeout-secs   Per-script timeout in seconds (default: 300)
 
@@ -398,7 +398,7 @@ cmd_repro_command() {
 #
 # These four subcommands shim through to the standalone `pyauto-heart`
 # binary installed from the sibling PyAutoLabs/PyAutoHeart repo. The
-# split is deliberate: PyAutoBuild produces releases; PyAutoHeart
+# split is deliberate: PyAutoHands produces releases; PyAutoHeart
 # monitors developer state continuously. Co-locating the CLI surface
 # (via these shims) without sharing Python code keeps both repos
 # independently releasable.
@@ -514,7 +514,7 @@ EOF
 cmd_help() {
   if [ $# -eq 0 ]; then
     cat <<'EOF'
-autobuild — unified CLI for PyAutoBuild operations.
+autobuild — unified CLI for PyAutoHands operations.
 
 Usage: autobuild <subcommand> [args...]
        autobuild help [subcommand]

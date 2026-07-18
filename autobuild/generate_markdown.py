@@ -11,7 +11,7 @@ examples can be read on GitHub with their output images visible.
 
 Run from the workspace root, exactly like ``generate.py``:
 
-    python ../PyAutoBuild/autobuild/generate_markdown.py autolens [--only <substring>]
+    python ../PyAutoHands/autobuild/generate_markdown.py autolens [--only <substring>]
 
 Rules this tool enforces:
 
@@ -75,7 +75,7 @@ def load_examples(workspace_path: Path):
     if not config_path.exists():
         raise FileNotFoundError(
             f"No curated example list at {config_path} — create it to use "
-            f"generate_markdown.py (see PyAutoBuild docs/internals.md)."
+            f"generate_markdown.py (see PyAutoHands docs/internals.md)."
         )
     with open(config_path) as f:
         raw = yaml.safe_load(f) or []
@@ -336,7 +336,7 @@ def write_index(workspace_path: Path, project: str, examples):
         lines.append(f"- [{title}]({md_rel}) — from `{script_rel}`")
     lines.append("")
     lines.append(
-        "These pages are regenerated manually by PyAutoBuild's "
+        "These pages are regenerated manually by PyAutoHands's "
         "`generate_markdown.py` when a curated script changes."
     )
     index_path = workspace_path / MARKDOWN_DIR / "README.md"

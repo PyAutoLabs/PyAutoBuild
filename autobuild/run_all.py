@@ -123,7 +123,7 @@ def main():
         default=None,
         help=(
             "Directory for result files (default: "
-            "PyAutoBuild/test_results/runs/<UTC-timestamp>/, with a "
+            "PyAutoHands/test_results/runs/<UTC-timestamp>/, with a "
             "test_results/latest symlink updated on success)."
         ),
     )

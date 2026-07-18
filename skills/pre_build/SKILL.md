@@ -1,6 +1,6 @@
 ---
 name: pre-build
-description: Prepare PyAuto workspace repositories for a release by validating clean main branches, formatting and generating artifacts, committing, pushing, and dispatching the PyAutoBuild release workflow. Use only after Heart readiness and the human version choice.
+description: Prepare PyAuto workspace repositories for a release by validating clean main branches, formatting and generating artifacts, committing, pushing, and dispatching the PyAutoHands release workflow. Use only after Heart readiness and the human version choice.
 ---
 
 # Pre Build
