@@ -18,8 +18,13 @@ Release-readiness checking is no longer Build's job. The version-skew gate, the
 deep `verify_install` suite, and URL hygiene all live in PyAutoHeart now;
 `autobuild verify_install` / `autobuild url_check` / `autobuild watch|status|
 tick|fix` are thin shims that delegate to `pyauto-heart`. Build keeps only the
-executor primitives (`pre_build`, `generate`, `run*`, `tag_and_merge`,
-`bump_colab_urls`, `release.yml`).
+executor primitives: the build/notebook pipeline (`pre_build`, `generate*`,
+`run_all` / `run*`), the navigator catalogue (`navigator` /
+`check_navigator` / `regenerate_navigator`), tagging + release
+(`tag_and_merge`, `bump_colab_urls`, `release.yml`), the release-notes and
+Slack tooling (`generate_release_notes`, `slack_release_notes`), assistant
+seeding (`clone_seed`), and `repro_command`. See `docs/internals.md` for the
+authoritative, current list.
 
 See [`docs/internals.md`](docs/internals.md) for the build pipeline, workspace
 folder structure, config files, and `release.yml` details. Read it when
