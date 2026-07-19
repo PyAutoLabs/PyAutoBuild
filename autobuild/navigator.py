@@ -61,7 +61,7 @@ GROUP_ORDER = [
 # project's framing (e.g. lensing) leaks into another's catalogue.
 WORKSPACE_TITLES = {
     "autofit": "PyAutoFit Workspace",
-    "autoconf": "PyAutoConf Workspace",
+    "autoconf": "PyAutoNerves Workspace",
     "autocti": "PyAutoCTI Workspace",
     "autogalaxy": "PyAutoGalaxy Workspace",
     "autolens": "PyAutoLens Workspace",

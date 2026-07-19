@@ -35,7 +35,7 @@ def classify_failure(result: dict) -> str:
     if "PermissionError" in combined:
         return "environment"
 
-    lib_patterns = ["PyAutoFit", "PyAutoArray", "PyAutoGalaxy", "PyAutoLens", "PyAutoConf",
+    lib_patterns = ["PyAutoFit", "PyAutoArray", "PyAutoGalaxy", "PyAutoLens", "PyAutoNerves",
                     "autofit/", "autoarray/", "autogalaxy/", "autolens/", "autoconf/"]
     if any(p in tb for p in lib_patterns):
         return "source_code_bug"

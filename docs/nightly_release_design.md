@@ -104,7 +104,7 @@ the 11 release-relevant repos, since the last nightly outcome (shipped or
 skipped), that is not a pipeline self-commit.**
 
 - **Repo set** (from `repos.yaml` roles; the set `release.yml` builds or
-  regenerates): libraries `PyAutoConf, PyAutoFit, PyAutoArray, PyAutoGalaxy,
+  regenerates): libraries `PyAutoNerves, PyAutoFit, PyAutoArray, PyAutoGalaxy,
   PyAutoLens`; workspaces `autofit_workspace, autogalaxy_workspace,
   autolens_workspace`; tutorials `HowToFit, HowToGalaxy, HowToLens`.
 - **Signal**: commits to `main` (`GET /repos/{owner}/{repo}/commits?sha=main&since=<window>`).

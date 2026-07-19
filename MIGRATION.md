@@ -20,7 +20,7 @@ This guide is the single reference for what changes, what does **not**, and what
 ## Why the `autobuild` command/package name stays
 
 The PyAuto ecosystem already decouples **organ names** from **package names**:
-PyAutoConf is the *Nerves* organ but ships the `autoconf` package; PyAutoFit,
+PyAutoNerves is the *Nerves* organ but ships the `autoconf` package; PyAutoFit,
 PyAutoGalaxy and PyAutoLens ship `autofit` / `autogalaxy` / `autolens`. Keeping
 `autobuild` as the command and importable package is consistent with that
 pattern and avoids a high-risk churn of every `PYTHONPATH`, `sys.path`, CI

@@ -3,7 +3,7 @@
 #
 # Usage: tag_and_merge.sh --version <VERSION>
 #
-# For each library repo (PyAutoConf, PyAutoFit, PyAutoArray, PyAutoGalaxy,
+# For each library repo (PyAutoNerves, PyAutoFit, PyAutoArray, PyAutoGalaxy,
 # PyAutoLens), commits pending changes with message "Update version to
 # <VERSION>" and tags HEAD as v<VERSION>. Stops on the first failing repo.
 
@@ -37,7 +37,7 @@ if [ -z "$VERSION" ]; then
 fi
 
 PYAUTOBASE="$(cd "$(dirname "$0")/../.." && pwd)"
-LIB_PROJECTS=(PyAutoConf PyAutoFit PyAutoArray PyAutoLens PyAutoGalaxy)
+LIB_PROJECTS=(PyAutoNerves PyAutoFit PyAutoArray PyAutoLens PyAutoGalaxy)
 
 for project in "${LIB_PROJECTS[@]}"; do
     repo="$PYAUTOBASE/$project"

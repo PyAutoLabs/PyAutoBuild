@@ -355,7 +355,7 @@ help_tag_and_merge() {
 autobuild tag_and_merge --version <VERSION>
 
 Commit any pending changes and tag HEAD as v<VERSION> in every library
-repo: PyAutoConf, PyAutoFit, PyAutoArray, PyAutoGalaxy, PyAutoLens.
+repo: PyAutoNerves, PyAutoFit, PyAutoArray, PyAutoGalaxy, PyAutoLens.
 
 Each repo gets a commit with message "Update version to <VERSION>" and
 a tag named "v<VERSION>". Stops on the first failing repo.

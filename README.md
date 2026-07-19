@@ -14,7 +14,7 @@
 📖 **Full documentation → <https://pyautoscientist.readthedocs.io>** — the whole PyAutoScientist organism, including how to fork and run your own.
 
 PyAutoHands is the **Hands** of the PyAuto organism: the executor that packages,
-tags, builds notebooks, and releases the PyAuto libraries (PyAutoConf, PyAutoFit,
+tags, builds notebooks, and releases the PyAuto libraries (PyAutoNerves, PyAutoFit,
 PyAutoArray, PyAutoGalaxy, PyAutoLens) and their workspaces to PyPI. **PyAutoHands
 executes work on behalf of PyAutoBrain** — the Brain decides, the Hands do. It
 runs no readiness checks and makes no gate decisions — those belong to

@@ -92,9 +92,9 @@ jobs:
           matrix:
             python-version: [3.12]
             project:
-              - repository: PyAutoLabs/PyAutoConf
+              - repository: PyAutoLabs/PyAutoNerves
                 ref: main
-                path: PyAutoConf
+                path: PyAutoNerves
               - repository: PyAutoLabs/PyAutoFit
                 ref: main
                 path: PyAutoFit
@@ -355,9 +355,9 @@ jobs:
     strategy:
       matrix:
         project:
-        - repository: PyAutoLabs/PyAutoConf
+        - repository: PyAutoLabs/PyAutoNerves
           ref: main
-          path: PyAutoConf
+          path: PyAutoNerves
           pat: PAT_PYAUTOLABS
         - repository: PyAutoLabs/PyAutoFit
           ref: main
@@ -613,7 +613,7 @@ jobs:
         git commit -m "Release ${{ needs.version_number.outputs.version_number }}: update notebooks and workspace catalogue" || true
     # The former "Update version in README" and "Write workspace version" steps
     # are gone: workspace version pins are obsolete under the compatibility-floor
-    # check (PyAutoConf#118) — the workspace's `version.minimum_library_version`
+    # check (PyAutoNerves#118) — the workspace's `version.minimum_library_version`
     # is bumped deliberately when scripts need new API, never by the release cron.
     - name: Regenerate API audit baseline
       if: "${{ matrix.workspace.write_api_baseline == true }}"

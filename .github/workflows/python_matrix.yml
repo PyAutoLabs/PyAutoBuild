@@ -6,7 +6,7 @@ on:
     - cron: '0 3 * * 1'  # Monday 03:00 UTC, off-cycle from the daily release
 
 # Force local editable builds to outrank PyPI versions so pip's resolver
-# doesn't replace `pip install -e ./PyAutoConf` (1.0.dev0) with PyPI's
+# doesn't replace `pip install -e ./PyAutoNerves` (1.0.dev0) with PyPI's
 # autoconf-2026.x during a downstream lib install. Without this, the
 # stale daily-release PyPI artifacts shadow the merged main code.
 env:
@@ -24,14 +24,14 @@ jobs:
       matrix:
         python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
         project:
-          - { name: PyAutoConf,   tests: test_autoconf }
+          - { name: PyAutoNerves,   tests: test_autoconf }
           - { name: PyAutoArray,  tests: test_autoarray }
           - { name: PyAutoFit,    tests: test_autofit }
           - { name: PyAutoGalaxy, tests: test_autogalaxy }
           - { name: PyAutoLens,   tests: test_autolens }
     steps:
       - uses: actions/checkout@v4
-        with: { repository: PyAutoLabs/PyAutoConf,   path: PyAutoConf }
+        with: { repository: PyAutoLabs/PyAutoNerves,   path: PyAutoNerves }
       - uses: actions/checkout@v4
         with: { repository: PyAutoLabs/PyAutoArray,  path: PyAutoArray }
       - uses: actions/checkout@v4
@@ -54,7 +54,7 @@ jobs:
           # autogalaxy looking for one whose nautilus-sampler pin matches
           # the local autolens — which never matches because PyPI is stale.
           pip install \
-            -e ./PyAutoConf \
+            -e ./PyAutoNerves \
             -e "./PyAutoArray[optional]" \
             -e ./PyAutoFit \
             -e ./PyAutoGalaxy \
@@ -89,7 +89,7 @@ jobs:
       MPLCONFIGDIR: /tmp/matplotlib
     steps:
       - uses: actions/checkout@v4
-        with: { repository: PyAutoLabs/PyAutoConf,   path: PyAutoConf }
+        with: { repository: PyAutoLabs/PyAutoNerves,   path: PyAutoNerves }
       - uses: actions/checkout@v4
         with: { repository: PyAutoLabs/PyAutoArray,  path: PyAutoArray }
       - uses: actions/checkout@v4
@@ -108,7 +108,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip wheel
           pip install \
-            -e ./PyAutoConf \
+            -e ./PyAutoNerves \
             -e "./PyAutoArray[optional]" \
             -e ./PyAutoFit \
             -e ./PyAutoGalaxy \

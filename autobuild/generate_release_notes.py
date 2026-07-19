@@ -64,7 +64,7 @@ UPSTREAM_DEPS = {
 
 # Human-readable short names
 REPO_NAMES = {
-    "PyAutoLabs/PyAutoConf": "PyAutoConf",
+    "PyAutoLabs/PyAutoNerves": "PyAutoNerves",
     "PyAutoLabs/PyAutoFit": "PyAutoFit",
     "PyAutoLabs/PyAutoArray": "PyAutoArray",
     "PyAutoLabs/PyAutoGalaxy": "PyAutoGalaxy",

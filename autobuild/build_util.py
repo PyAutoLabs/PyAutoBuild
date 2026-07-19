@@ -31,7 +31,7 @@ def py_to_notebook(filename: Path):
 
 
 # Projects whose generated notebooks receive the Colab setup cell. Must stay in
-# sync with the `_PROJECTS` registry in PyAutoConf's `autoconf/setup_colab.py` —
+# sync with the `_PROJECTS` registry in PyAutoNerves's `autoconf/setup_colab.py` —
 # the injected cell calls `setup_colab.setup("<project>")` with this key.
 COLAB_PROJECTS = {
     "autofit",
@@ -85,7 +85,7 @@ def inject_colab_setup(notebook_path, project: str):
         raise ValueError(
             f"inject_colab_setup: unknown project '{project}' — add it to "
             f"COLAB_PROJECTS here and to the _PROJECTS registry in "
-            f"PyAutoConf's autoconf/setup_colab.py. Known: {sorted(COLAB_PROJECTS)}"
+            f"PyAutoNerves's autoconf/setup_colab.py. Known: {sorted(COLAB_PROJECTS)}"
         )
 
     with open(notebook_path, "r") as f:
