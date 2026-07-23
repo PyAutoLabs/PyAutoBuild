@@ -72,6 +72,60 @@ COMMENT_SCRIPT = (
 )
 
 
+MERGED_BOTTOM_SCRIPT = (
+    '"""\n'
+    'Imaging Example\n'
+    '===============\n'
+    '"""\n'
+    'import autolens as al\n'
+    '\n'
+    'al.do_something()\n'
+    '\n'
+    '"""\n'
+    'Wrap Up\n'
+    '-------\n'
+    '\n'
+    'Closing prose about what to try next.\n'
+    '\n'
+    '__Env__ (Developer Only)\n'
+    '\n'
+    'Not user documentation: this section configures the test harness.\n'
+    '\n'
+    'ENV: full_datasets\n'
+    '"""\n'
+)
+
+MERGED_MODULE_SCRIPT = (
+    '"""\n'
+    'Test Script\n'
+    '===========\n'
+    '\n'
+    'Overview of what this integration test does.\n'
+    '\n'
+    '__Env__\n'
+    '\n'
+    'Test-harness configuration.\n'
+    '\n'
+    'ENV: jax\n'
+    '"""\n'
+    'import autolens as al\n'
+    '\n'
+    'al.do_something()\n'
+)
+
+EMPTIED_BLOCK_SCRIPT = (
+    'import autolens as al\n'
+    '\n'
+    '"""\n'
+    '\n'
+    '__Env__\n'
+    '\n'
+    'ENV: jax\n'
+    '"""\n'
+    'al.do_something()\n'
+)
+
+
 def _assert_no_env_leak(joined: str):
     assert "__Env__" not in joined
     assert "ENV:" not in joined
@@ -93,6 +147,45 @@ def test_strip_removes_top_env_section_keeps_module_docstring():
     out = "".join(strip_env_declarations(_lines(TOP_SECTION_SCRIPT)))
     _assert_no_env_leak(out)
     assert "Test Script" in out  # module docstring preserved
+    assert "al.do_something()" in out
+
+
+def test_strip_removes_merged_section_at_end_of_final_docstring():
+    # Merged form: `__Env__` appended INSIDE the final docstring. The docstring's
+    # earlier prose and its delimiters survive; only the section is dropped.
+    out = "".join(strip_env_declarations(_lines(MERGED_BOTTOM_SCRIPT)))
+    _assert_no_env_leak(out)
+    assert "Imaging Example" in out
+    assert "Wrap Up" in out
+    assert "Closing prose about what to try next." in out
+    # The docstring that carried the section keeps its closing delimiter.
+    assert out.rstrip().endswith('"""')
+
+
+def test_strip_removes_merged_section_at_end_of_module_docstring():
+    out = "".join(strip_env_declarations(_lines(MERGED_MODULE_SCRIPT)))
+    _assert_no_env_leak(out)
+    assert "Test Script" in out
+    assert "Overview of what this integration test does." in out
+    assert "al.do_something()" in out
+
+
+def test_strip_standalone_fallback_removes_whole_block():
+    # A docstring holding ONLY the `__Env__` section (the standalone fallback)
+    # is removed whole — the existing bottom/top fixtures are this shape.
+    out = "".join(strip_env_declarations(_lines(BOTTOM_SECTION_SCRIPT)))
+    _assert_no_env_leak(out)
+    assert '"""' in out  # the module docstring block is untouched
+    assert "Imaging Example" in out
+
+
+def test_strip_emptied_docstring_block_is_removed_whole():
+    # When the section is the block's only real content (prose before it is just
+    # a separator), stripping must NOT leave an empty `"""` ... `"""` pair.
+    out = "".join(strip_env_declarations(_lines(EMPTIED_BLOCK_SCRIPT)))
+    _assert_no_env_leak(out)
+    assert '"""' not in out  # no dangling empty docstring
+    assert "import autolens as al" in out
     assert "al.do_something()" in out
 
 

@@ -32,10 +32,11 @@ MANAGED_ENV_PREFIXES = ("PYAUTO_",)
 # --- In-file env declarations (docs/env_profile_redesign.md §10) --------------
 #
 # A script declares the workspace-behaviour vars it wants RELEASED (unset) via a
-# single anchored `# ENV: <tokens>` comment line. Each token unsets its managed
-# var(s) AFTER the profile's defaults/overrides/derivation are applied, so the
-# var falls back to the library default — which for all four vars is the "absent
-# == off == '0'" state (verified against the reader code, docs §10). This is
+# single bottom-of-file `__Env__` docstring section carrying an `ENV: <tokens>`
+# line. Each token unsets its managed var(s) AFTER the profile's
+# defaults/overrides/derivation are applied, so the var falls back to the
+# library default — which for all four vars is the "absent == off == '0'" state
+# (verified against the reader code, docs §10). This is
 # exactly the semantics of today's profile `unset:` lists, which is what makes
 # the later profile->declaration migration a provable no-op (empty resolved-env
 # diff). The token map (a token may release more than one var):
@@ -59,27 +60,35 @@ DECLARABLE_ENV_VARS = frozenset(
     var for vars_ in ENV_DECLARATION_TOKENS.values() for var in vars_
 )
 
-# A declaration takes one of TWO on-disk forms (docs/env_profile_redesign.md §10):
+# A declaration takes ONE on-disk form (docs/env_profile_redesign.md §10): an
+# ``__Env__`` SECTION appended INSIDE an existing docstring — at the end of the
+# final docstring in user-facing scripts, at the end of the module docstring in
+# ``_test`` scripts (multiple ``__Section__`` headers share one docstring; they
+# are never close-then-reopened). A standalone ``__Env__``-only docstring is the
+# fallback for a script with no adjacent docstring.
 #
-#   Comment form (``_test`` repos, code-heavy / doc-light):
-#       # ENV: jax full_datasets
-#   A single ``# ENV:`` comment anchored at column 0, then whitespace-separated
-#   tokens.
-#
-#   Docstring form (user-facing workspaces — kept out of teaching prose and
-#   stripped from generated notebooks/markdown):
 #       """
+#       Overview / tutorial prose ...
+#
 #       __Env__ (Developer Only)
 #       ...
 #       ENV: full_datasets
 #       """
-#   A bottom-of-file docstring block whose first non-blank line is ``__Env__``
-#   (a trailing parenthetical such as ``(Developer Only)`` is allowed),
-#   containing exactly one ``ENV: <tokens>`` line (no leading ``#``).
+#   The header is a column-0 ``__Env__`` line ANYWHERE inside the block (a
+#   trailing parenthetical such as ``(Developer Only)`` is allowed); exactly one
+#   ``ENV: <tokens>`` line (no leading ``#``) must follow it before the closing
+#   delimiter.
 #
-# A file may carry EITHER one comment OR one ``__Env__`` section — never both,
-# and never two of either. The parser stays deliberately line-based (no ``ast``),
-# consistent with the rest of this module.
+# The legacy ``# ENV:`` comment form was REMOVED once every repo migrated to the
+# ``__Env__`` section (PyAutoHands#189/#190 + the workspace migrations): a
+# ``# ENV:`` line anchored at column 0 now RAISES rather than parses. A file may
+# carry at most one ``__Env__`` section; a second is a duplicate error. The
+# parser stays deliberately line-based (no ``ast``), consistent with the rest of
+# this module.
+#
+# ``_ENV_DECLARATION_RE`` is retained only to DETECT the removed comment form and
+# raise on it (``add_notebook_quotes.strip_env_declarations`` also strips such
+# lines defensively when generating notebooks/markdown).
 _ENV_DECLARATION_RE = re.compile(r"^# ENV:(?P<tokens>.*)$")
 # A bare triple-quote delimiter alone on its line (opens/closes a docstring).
 _DOCSTRING_DELIM_RE = re.compile(r"^(?:\"\"\"|''')\s*$")
@@ -90,8 +99,8 @@ _ENV_SECTION_HEADER_RE = re.compile(r"^__Env__\b")
 _ENV_SECTION_LINE_RE = re.compile(r"^ENV:\s+(?P<tokens>.*)$")
 
 _DUPLICATE_DECLARATION_MSG = (
-    "more than one env declaration (at most one '# ENV:' comment line "
-    "or one '__Env__' docstring section is allowed)"
+    "more than one env declaration (at most one '__Env__' docstring section "
+    "is allowed)"
 )
 
 
@@ -109,55 +118,73 @@ def read_env_declaration(path) -> Optional[List[str]]:
     """Return the declared env tokens for a script, or None if it declares none.
 
     Scans the whole file line-by-line (scripts are small) for the single
-    declaration — in EITHER the ``# ENV: <tokens>`` comment form or the
-    bottom-of-file ``__Env__`` docstring-section form (docs/env_profile_redesign.md
-    §10). Returns the list of token strings (each a key of
-    ``ENV_DECLARATION_TOKENS``); an empty comment ``# ENV:`` line returns ``[]``.
+    declaration — the bottom-of-file ``__Env__`` docstring-section form
+    (docs/env_profile_redesign.md §10). Returns the list of token strings (each a
+    key of ``ENV_DECLARATION_TOKENS``); an empty ``ENV:`` line returns ``[]``.
+
+    The legacy ``# ENV:`` comment form was REMOVED after every repo migrated to
+    the ``__Env__`` section: a ``# ENV:`` line anchored at column 0 now RAISES
+    (loud beats a silently-ignored declaration).
 
     Raises
     ------
     ValueError
-        If the file carries more than one declaration in any mix of the two
-        forms, if an ``__Env__`` section has no (or more than one) ``ENV:`` line,
-        or if a token is not in ``ENV_DECLARATION_TOKENS`` — loud beats silent,
-        in both the resolver and the validator (which catches and reports it as
-        a config error).
+        If the file carries a removed ``# ENV:`` comment-form line, if it carries
+        more than one ``__Env__`` section, if an ``__Env__`` section has no (or
+        more than one) ``ENV:`` line, or if a token is not in
+        ``ENV_DECLARATION_TOKENS`` — loud beats silent, in both the resolver and
+        the validator (which catches and reports it as a config error).
     """
     path = Path(path)
-    tokens: Optional[List[str]] = None
     lines = path.read_text().splitlines()
-    i = 0
     n = len(lines)
+
+    # Comment form (REMOVED): any `# ENV:` line anchored at column 0 now raises —
+    # every repo migrated to the `__Env__` docstring section (docs §10). Checked
+    # in its own pass so the removal is loud wherever the line appears.
+    for line in lines:
+        if _ENV_DECLARATION_RE.match(line) is not None:
+            raise ValueError(
+                f"{path}: the '# ENV:' comment form was removed — declare env "
+                "requirements in an '__Env__' docstring section instead "
+                "(docs/env_profile_redesign.md §10)"
+            )
+
+    # Docstring form: scan each bare `"""`/`'''` block for a column-0 `__Env__`
+    # header appended ANYWHERE inside it (docs §10) — the header may sit at the
+    # end of a docstring that opens with module/tutorial prose (the canonical
+    # merged form), or be the block's only content (the standalone fallback for a
+    # script with no adjacent docstring). Exactly one `ENV: <tokens>` line must
+    # follow the header before the block's closing delimiter.
+    tokens: Optional[List[str]] = None
+    i = 0
     while i < n:
         line = lines[i]
 
-        # Comment form: `# ENV:` anchored at column 0.
-        m = _ENV_DECLARATION_RE.match(line)
-        if m is not None:
-            if tokens is not None:
-                raise ValueError(f"{path}: {_DUPLICATE_DECLARATION_MSG}")
-            tokens = m.group("tokens").split()
-            _validate_tokens(path, tokens)
-            i += 1
-            continue
-
-        # Docstring form: a bare `"""`/`'''` opener whose first non-blank inner
-        # line is the `__Env__` header.
         if _DOCSTRING_DELIM_RE.match(line):
-            delim = line.strip()
-            j = i + 1
-            while j < n and lines[j].strip() == "":
-                j += 1
-            if j < n and _ENV_SECTION_HEADER_RE.match(lines[j].strip()):
-                # Walk to the closing delimiter, collecting the ENV: line(s).
-                k = j
+            # Find the block's closing delimiter and every column-0 `__Env__`
+            # header inside it.
+            closing = None
+            header_idxs: List[int] = []
+            k = i + 1
+            while k < n:
+                if _DOCSTRING_DELIM_RE.match(lines[k]):
+                    closing = k
+                    break
+                if _ENV_SECTION_HEADER_RE.match(lines[k]):
+                    header_idxs.append(k)
+                k += 1
+
+            if header_idxs:
+                # Two headers in one block, or a header when another block already
+                # declared, are both the duplicate-declaration error.
+                if len(header_idxs) > 1 or tokens is not None:
+                    raise ValueError(f"{path}: {_DUPLICATE_DECLARATION_MSG}")
+                header = header_idxs[0]
+                end = closing if closing is not None else n
                 section_tokens: Optional[List[str]] = None
-                closing = None
-                while k < n:
-                    if _DOCSTRING_DELIM_RE.match(lines[k]) and k != i:
-                        closing = k
-                        break
-                    em = _ENV_SECTION_LINE_RE.match(lines[k].strip())
+                for m in range(header + 1, end):
+                    em = _ENV_SECTION_LINE_RE.match(lines[m].strip())
                     if em is not None:
                         if section_tokens is not None:
                             raise ValueError(
@@ -166,18 +193,18 @@ def read_env_declaration(path) -> Optional[List[str]]:
                                 "allowed)"
                             )
                         section_tokens = em.group("tokens").split()
-                    k += 1
                 if section_tokens is None:
                     raise ValueError(
                         f"{path}: '__Env__' docstring section has no 'ENV:' line "
                         "(it must contain exactly one)"
                     )
-                if tokens is not None:
-                    raise ValueError(f"{path}: {_DUPLICATE_DECLARATION_MSG}")
                 tokens = section_tokens
                 _validate_tokens(path, tokens)
-                i = (closing + 1) if closing is not None else n
-                continue
+
+            # Skip past the whole block (env or not) — declarations only live in
+            # `__Env__` sections, so nothing else inside a docstring is scanned.
+            i = (closing + 1) if closing is not None else n
+            continue
 
         i += 1
 
@@ -185,7 +212,7 @@ def read_env_declaration(path) -> Optional[List[str]]:
 
 
 def _declaration_source_path(file: Path) -> Optional[Path]:
-    """Resolve the on-disk source file whose ``# ENV:`` line governs ``file``.
+    """Resolve the on-disk source file whose ``__Env__`` declaration governs ``file``.
 
     The ``file`` argument reaches us in different forms from different callers
     (all keeping the fixed positional signature — no vendored copy is edited):
@@ -304,7 +331,7 @@ def apply_profile(
 ) -> Dict[str, str]:
     """Apply a profile to a base env dict: defaults, then overrides in order,
     then the JAX-marker derivation (when the profile opts in), then the script's
-    own in-file ``# ENV:`` declaration.
+    own in-file ``__Env__`` declaration.
 
     The single resolution path shared by the runner (``build_env_for_script``,
     base = scrubbed ambient env) and the validator (``resolve_clean``, base =

@@ -164,25 +164,13 @@ def test_read_declaration_none_when_absent(tmp_path):
     assert read_env_declaration(p) is None
 
 
-def test_read_declaration_tokens(tmp_path):
+def test_read_declaration_comment_form_removed_raises(tmp_path):
+    # The legacy `# ENV:` comment form was removed once every repo migrated to
+    # the `__Env__` section — a column-0 `# ENV:` line now raises rather than
+    # parsing (docs/env_profile_redesign.md §10). The valid-parse / empty-tokens
+    # / unknown-token / duplicate cases now live in docstring form below.
     p = _write_script(tmp_path, "imaging/x.py", "# ENV: jax full_datasets\nimport al\n")
-    assert read_env_declaration(p) == ["jax", "full_datasets"]
-
-
-def test_read_declaration_empty_line_is_no_tokens(tmp_path):
-    p = _write_script(tmp_path, "imaging/x.py", "# ENV:\nimport al\n")
-    assert read_env_declaration(p) == []
-
-
-def test_read_declaration_unknown_token_raises(tmp_path):
-    p = _write_script(tmp_path, "imaging/x.py", "# ENV: jax nonsense\n")
-    with pytest.raises(ValueError, match="unknown env declaration token 'nonsense'"):
-        read_env_declaration(p)
-
-
-def test_read_declaration_duplicate_line_raises(tmp_path):
-    p = _write_script(tmp_path, "imaging/x.py", "# ENV: jax\ncode\n# ENV: real_plots\n")
-    with pytest.raises(ValueError, match="more than one env declaration"):
+    with pytest.raises(ValueError, match="the '# ENV:' comment form was removed"):
         read_env_declaration(p)
 
 
@@ -234,6 +222,72 @@ def test_read_declaration_docstring_plain_header_no_parenthetical(tmp_path):
     assert read_env_declaration(p) == ["real_output"]
 
 
+def test_read_declaration_merged_at_end_of_final_docstring(tmp_path):
+    # Canonical user-facing form: `__Env__` is a section appended INSIDE the
+    # final docstring, after its tutorial prose (not a close-then-reopen block).
+    body = (
+        'import autolens as al\n'
+        'code()\n'
+        '\n'
+        '"""\n'
+        'Wrap Up\n'
+        '-------\n'
+        '\n'
+        'Closing tutorial prose.\n'
+        '\n'
+        '__Env__ (Developer Only)\n'
+        '\n'
+        'Developer-only note.\n'
+        '\n'
+        'ENV: full_datasets\n'
+        '"""\n'
+    )
+    p = _write_script(tmp_path, "imaging/x.py", body)
+    assert read_env_declaration(p) == ["full_datasets"]
+
+
+def test_read_declaration_merged_at_end_of_module_docstring(tmp_path):
+    # Canonical `_test` form: `__Env__` appended to the END of the module
+    # docstring, after the overview prose.
+    body = (
+        '"""\n'
+        'Overview\n'
+        '========\n'
+        '\n'
+        'This script does X.\n'
+        '\n'
+        '__Env__\n'
+        '\n'
+        'Test-harness note.\n'
+        '\n'
+        'ENV: jax full_datasets\n'
+        '"""\n'
+        'import autolens as al\n'
+    )
+    p = _write_script(tmp_path, "imaging/x.py", body)
+    assert read_env_declaration(p) == ["jax", "full_datasets"]
+
+
+def test_read_declaration_two_env_headers_in_one_docstring_raises(tmp_path):
+    # Two `__Env__` headers sharing one docstring block = duplicate declaration.
+    body = (
+        '"""\n'
+        'Prose.\n'
+        '\n'
+        '__Env__\n'
+        '\n'
+        'ENV: jax\n'
+        '\n'
+        '__Env__\n'
+        '\n'
+        'ENV: real_plots\n'
+        '"""\n'
+    )
+    p = _write_script(tmp_path, "imaging/x.py", body)
+    with pytest.raises(ValueError, match="more than one env declaration"):
+        read_env_declaration(p)
+
+
 def test_read_declaration_docstring_unknown_token_raises(tmp_path):
     body = '"""\n__Env__\n\nENV: jax nonsense\n"""\n'
     p = _write_script(tmp_path, "imaging/x.py", body)
@@ -248,6 +302,16 @@ def test_read_declaration_docstring_missing_env_line_raises(tmp_path):
         read_env_declaration(p)
 
 
+def test_read_declaration_docstring_empty_env_tokens_raises(tmp_path):
+    # The docstring form cannot express an empty token list: a bare `ENV:` line
+    # (the old comment form's `# ENV:` -> [] case) is not a valid ENV line, so
+    # the section reads as having no ENV: line at all.
+    body = '"""\n__Env__\n\nENV:\n"""\n'
+    p = _write_script(tmp_path, "imaging/x.py", body)
+    with pytest.raises(ValueError, match="no 'ENV:' line"):
+        read_env_declaration(p)
+
+
 def test_read_declaration_docstring_two_env_lines_raises(tmp_path):
     body = '"""\n__Env__\n\nENV: jax\nENV: real_plots\n"""\n'
     p = _write_script(tmp_path, "imaging/x.py", body)
@@ -255,11 +319,12 @@ def test_read_declaration_docstring_two_env_lines_raises(tmp_path):
         read_env_declaration(p)
 
 
-def test_read_declaration_mixed_forms_raises(tmp_path):
-    # A comment AND a docstring section = duplicate, in any mix.
+def test_read_declaration_comment_form_raises_even_with_docstring_section(tmp_path):
+    # The removed comment form raises even when a valid `__Env__` section is also
+    # present — the column-0 `# ENV:` line is the removal trigger.
     body = '# ENV: jax\ncode\n"""\n__Env__\n\nENV: real_plots\n"""\n'
     p = _write_script(tmp_path, "imaging/x.py", body)
-    with pytest.raises(ValueError, match="more than one env declaration"):
+    with pytest.raises(ValueError, match="the '# ENV:' comment form was removed"):
         read_env_declaration(p)
 
 
@@ -302,7 +367,7 @@ def test_real_output_expands_to_all_four(tmp_path):
         "PYAUTO_FAST_PLOTS",
         "PYAUTO_TEST_MODE",
     }
-    _write_script(tmp_path, "imaging/x.py", "# ENV: real_output\n")
+    _write_script(tmp_path, "imaging/x.py", '"""\n__Env__\n\nENV: real_output\n"""\n')
     cfg = {
         "defaults": {
             "PYAUTO_DISABLE_JAX": "1",
@@ -321,7 +386,9 @@ def test_real_output_expands_to_all_four(tmp_path):
 def test_declaration_unsets_after_default(tmp_path):
     # A profile that pins SMALL_DATASETS=1 + a script declaring full_datasets:
     # the resolved env must LACK the var (falls back to the library default).
-    _write_script(tmp_path, "imaging/x.py", "# ENV: full_datasets\ncode\n")
+    _write_script(
+        tmp_path, "imaging/x.py", '"""\n__Env__\n\nENV: full_datasets\n"""\ncode\n'
+    )
     cfg = {"defaults": {"PYAUTO_SMALL_DATASETS": "1"}}
     env = apply_profile({}, tmp_path / "scripts" / "imaging" / "x.py", cfg)
     assert "PYAUTO_SMALL_DATASETS" not in env
@@ -329,7 +396,7 @@ def test_declaration_unsets_after_default(tmp_path):
 
 def test_declaration_unsets_after_override(tmp_path):
     # Declarations apply LAST — after an override that sets the var.
-    _write_script(tmp_path, "imaging/x.py", "# ENV: jax\ncode\n")
+    _write_script(tmp_path, "imaging/x.py", '"""\n__Env__\n\nENV: jax\n"""\ncode\n')
     cfg = {
         "defaults": {},
         "overrides": [{"pattern": "imaging/", "set": {"PYAUTO_DISABLE_JAX": "1"}}],
@@ -340,7 +407,9 @@ def test_declaration_unsets_after_override(tmp_path):
 
 def test_declaration_resolves_via_scripts_relative_path(tmp_path, monkeypatch):
     # The per-PR gate passes a path relative to scripts/, with cwd = repo root.
-    _write_script(tmp_path, "imaging/x.py", "# ENV: real_search\ncode\n")
+    _write_script(
+        tmp_path, "imaging/x.py", '"""\n__Env__\n\nENV: real_search\n"""\ncode\n'
+    )
     monkeypatch.chdir(tmp_path)
     cfg = {"defaults": {"PYAUTO_TEST_MODE": "2"}}
     env = apply_profile({}, Path("imaging/x.py"), cfg)
@@ -349,7 +418,9 @@ def test_declaration_resolves_via_scripts_relative_path(tmp_path, monkeypatch):
 
 def test_notebook_entry_maps_to_source_script(tmp_path, monkeypatch):
     # A .ipynb entry resolves the declaration from its .py source under scripts/.
-    _write_script(tmp_path, "imaging/x.py", "# ENV: real_plots\ncode\n")
+    _write_script(
+        tmp_path, "imaging/x.py", '"""\n__Env__\n\nENV: real_plots\n"""\ncode\n'
+    )
     monkeypatch.chdir(tmp_path)
     cfg = {"defaults": {"PYAUTO_FAST_PLOTS": "1"}}
     env = apply_profile({}, Path("imaging/x.ipynb"), cfg)
@@ -358,7 +429,9 @@ def test_notebook_entry_maps_to_source_script(tmp_path, monkeypatch):
 
 def test_notebook_absolute_path_maps_notebooks_to_scripts(tmp_path):
     # The mega-run notebook runner passes an absolute path under notebooks/.
-    _write_script(tmp_path, "imaging/x.py", "# ENV: real_plots\ncode\n")
+    _write_script(
+        tmp_path, "imaging/x.py", '"""\n__Env__\n\nENV: real_plots\n"""\ncode\n'
+    )
     nb = tmp_path / "notebooks" / "imaging" / "x.ipynb"
     nb.parent.mkdir(parents=True, exist_ok=True)
     nb.write_text("{}")
@@ -369,7 +442,7 @@ def test_notebook_absolute_path_maps_notebooks_to_scripts(tmp_path):
 
 def test_declaration_absolute_script_path(tmp_path):
     # The mega-run script runner passes an absolute path under scripts/.
-    p = _write_script(tmp_path, "imaging/x.py", "# ENV: jax\ncode\n")
+    p = _write_script(tmp_path, "imaging/x.py", '"""\n__Env__\n\nENV: jax\n"""\ncode\n')
     cfg = {"defaults": {"PYAUTO_DISABLE_JAX": "1"}}
     env = apply_profile({}, p, cfg)
     assert "PYAUTO_DISABLE_JAX" not in env
@@ -384,6 +457,6 @@ def test_no_declaration_leaves_env_untouched(tmp_path, monkeypatch):
 
 
 def test_unknown_token_raises_in_resolver(tmp_path):
-    p = _write_script(tmp_path, "imaging/x.py", "# ENV: bogus\n")
+    p = _write_script(tmp_path, "imaging/x.py", '"""\n__Env__\n\nENV: bogus\n"""\n')
     with pytest.raises(ValueError, match="unknown env declaration token"):
         apply_profile({}, p, {"defaults": {}})

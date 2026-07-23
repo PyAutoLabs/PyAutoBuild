@@ -14,18 +14,24 @@ def strip_env_declarations(lines: List[str]) -> List[str]:
 
     In-file env declarations are developer-only test-harness configuration
     (docs/env_profile_redesign.md §10) and must never appear in a generated
-    notebook or markdown page. Two forms are stripped:
+    notebook or markdown page. The stripped forms:
 
-    * the ``__Env__`` docstring section — the ENTIRE triple-quoted block whose
-      first non-blank line is the ``__Env__`` header (the user-workspace form);
-    * a ``# ENV: ...`` comment line anchored at column 0 (the ``_test``-repo
-      form — those repos are not doc-generated, but this is defence in depth).
+    * the ``__Env__`` docstring section — a column-0 ``__Env__`` header appended
+      anywhere inside a docstring block (the canonical merged form) plus its one
+      ``ENV:`` line, through the line before the block's closing delimiter. The
+      docstring's earlier prose and its delimiters are PRESERVED; the blank /
+      separator line(s) immediately before the header are trimmed. When the
+      header is the block's only content (the standalone fallback), or when the
+      strip would leave an empty docstring, the whole block is removed;
+    * a ``# ENV: ...`` comment line anchored at column 0 — the comment form was
+      removed at runtime (it now raises in ``read_env_declaration``), but a stray
+      one is still stripped here defensively so it never reaches an artefact.
 
     This is the single shared strip layer: ``build_util.py_to_notebook`` routes
     both notebook generation (``generate.py``) and markdown generation
     (``generate_markdown.py``) through ``add_notebook_quotes``, and
     ``navigator.py`` reuses this same tokenizer to segment docstrings — so
-    stripping here drops the block from every generated artefact and keeps it
+    stripping here drops the section from every generated artefact and keeps it
     out of the catalogue.
     """
     out: List[str] = []
@@ -35,24 +41,46 @@ def strip_env_declarations(lines: List[str]) -> List[str]:
         line = lines[i]
         stripped = line.strip()
 
-        # Comment form: a `# ENV:` line anchored at column 0.
+        # Comment form (removed at runtime): strip a column-0 `# ENV:` defensively.
         if stripped.startswith("# ENV:") and line[:1] == "#":
             i += 1
             continue
 
-        # Docstring form: a bare `"""`/`'''` opener whose first non-blank inner
-        # line is the `__Env__` header — drop the whole block, delimiters too.
+        # Docstring block: a bare `"""`/`'''` opener. Scan to its closing
+        # delimiter for a column-0 `__Env__` header appended anywhere inside.
         if stripped in ('"""', "'''"):
             delim = stripped
-            j = i + 1
-            while j < n and lines[j].strip() == "":
-                j += 1
-            if j < n and lines[j].strip().startswith("__Env__"):
-                k = j
-                while k < n and lines[k].strip() != delim:
-                    k += 1
-                i = k + 1  # skip through the closing delimiter
+            k = i + 1
+            header = None
+            while k < n and lines[k].strip() != delim:
+                if header is None and lines[k].startswith("__Env__"):
+                    header = k
+                k += 1
+            close = k  # closing-delimiter index (== n if unterminated)
+
+            if header is not None:
+                # Prose kept before the `__Env__` section, with the blank /
+                # separator line(s) immediately preceding the header trimmed off.
+                kept = list(lines[i + 1 : header])
+                while kept and kept[-1].strip() == "":
+                    kept.pop()
+                if any(seg.strip() for seg in kept):
+                    # Merged form: keep the opener, the earlier prose and the
+                    # closing delimiter; drop the header through the closer's
+                    # preceding line.
+                    out.append(line)
+                    out.extend(kept)
+                    if close < n:
+                        out.append(lines[close])
+                # else: the block holds only the `__Env__` section (standalone
+                # fallback) or is emptied by the strip — drop it whole.
+                i = close + 1 if close < n else n
                 continue
+
+            # A non-`__Env__` docstring block: emit it unchanged, delimiters too.
+            out.extend(lines[i : close + 1] if close < n else lines[i:])
+            i = close + 1 if close < n else n
+            continue
 
         out.append(line)
         i += 1

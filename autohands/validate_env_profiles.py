@@ -14,7 +14,7 @@ Error tier (exit 1) — always on:
     pattern/set/unset; non-mapping ``set``; non-list ``unset``)
   - dead patterns: an override whose pattern matches zero scripts — a typo or
     a stale entry, the silent-over-match failure mode's cousin
-  - declaration syntax: an unknown token or a duplicate ``# ENV:`` line in any
+  - declaration syntax: an unknown token or a duplicate ``__Env__`` section in any
     script (docs/env_profile_redesign.md §10)
   - resolver round-trip: a declared script whose fully resolved env still
     carries a var its declaration unsets — a resolver bug, not a config error
@@ -70,7 +70,7 @@ def resolve_clean(script: Path, cfg: dict) -> dict[str, str]:
 def check_declarations(scripts: list[Path]) -> list[str]:
     """Return declaration-syntax errors across the workspace's scripts.
 
-    Independent of any profile: an unknown token or a duplicate ``# ENV:`` line
+    Independent of any profile: an unknown token or a duplicate ``__Env__`` section
     is a config error regardless of which profile is resolved. ``read_env_
     declaration`` raises ``ValueError`` for both; we catch and report so the
     validator surfaces the whole set rather than crashing on the first.
@@ -145,7 +145,7 @@ def check_profile(
             (errors if strict_derivation else warnings).append(msg)
         # --strict-declarations: an override whose ENTIRE effect is an unset of
         # only declarable vars (no set: clause) is expressible as an in-file
-        # `# ENV:` declaration and should live there instead (docs §10). Default
+        # `__Env__` declaration and should live there instead (docs §10). Default
         # OFF — the migration PRs land first; CI flips it on afterwards.
         if strict_declarations:
             unset_list = ov.get("unset") or []
@@ -168,7 +168,7 @@ def check_profile(
                 errors.append(
                     f"{name}: overrides[{i}] pattern '{ov['pattern']}' unsets only "
                     f"declarable vars {sorted(set(unset_list))} with no set: — "
-                    "declare this in-file via a '# ENV:' line instead "
+                    "declare this in-file via an '__Env__' docstring section instead "
                     "(--strict-declarations)"
                 )
 
@@ -177,7 +177,7 @@ def check_profile(
             try:
                 env = resolve_clean(script, cfg)
             except ValueError:
-                # A bad `# ENV:` declaration — reported by check_declarations;
+                # A bad `__Env__` declaration — reported by check_declarations;
                 # skip the marker check for it rather than crashing the run.
                 continue
             disabled = env.get("PYAUTO_DISABLE_JAX")
@@ -276,7 +276,7 @@ def main(argv: list[str] | None = None) -> int:
         "--strict-declarations",
         action="store_true",
         help="error on any profile override whose whole effect is expressible "
-        "as an in-file '# ENV:' declaration (default off; CI flips it on "
+        "as an in-file '__Env__' declaration (default off; CI flips it on "
         "after the migration PRs)",
     )
     ns = ap.parse_args(argv)

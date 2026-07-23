@@ -193,14 +193,27 @@ def _write(ws: Path, rel: str, body: str) -> None:
 
 def test_unknown_declaration_token_is_an_error(tmp_path):
     ws = _workspace(tmp_path, GOOD_SMOKE, GOOD_RELEASE, ["imaging/run.py"])
-    _write(ws, "imaging/run.py", "# ENV: jax bogus\ncode\n")
+    _write(ws, "imaging/run.py", '"""\n__Env__\n\nENV: jax bogus\n"""\ncode\n')
     errors, _ = validate_workspace(ws)
     assert any("unknown env declaration token 'bogus'" in e for e in errors)
 
 
+def test_removed_comment_form_is_an_error(tmp_path):
+    # The legacy `# ENV:` comment form was removed — a column-0 `# ENV:` line now
+    # errors (declare env intent via an `__Env__` docstring section instead).
+    ws = _workspace(tmp_path, GOOD_SMOKE, GOOD_RELEASE, ["imaging/run.py"])
+    _write(ws, "imaging/run.py", "# ENV: jax\ncode\n")
+    errors, _ = validate_workspace(ws)
+    assert any("the '# ENV:' comment form was removed" in e for e in errors)
+
+
 def test_duplicate_declaration_line_is_an_error(tmp_path):
     ws = _workspace(tmp_path, GOOD_SMOKE, GOOD_RELEASE, ["imaging/run.py"])
-    _write(ws, "imaging/run.py", "# ENV: jax\ncode\n# ENV: real_plots\n")
+    _write(
+        ws,
+        "imaging/run.py",
+        '"""\n__Env__\n\nENV: jax\n"""\ncode\n"""\n__Env__\n\nENV: real_plots\n"""\n',
+    )
     errors, _ = validate_workspace(ws)
     assert any("more than one env declaration" in e for e in errors)
 
@@ -211,7 +224,7 @@ def test_valid_declaration_passes_and_round_trips(tmp_path):
     # resolved env drops the var.
     smoke = 'defaults: {PYAUTO_TEST_MODE: "2", PYAUTO_SMALL_DATASETS: "1"}\noverrides: []\n'
     ws = _workspace(tmp_path, smoke, GOOD_RELEASE, ["imaging/run.py"])
-    _write(ws, "imaging/run.py", "# ENV: full_datasets\ncode\n")
+    _write(ws, "imaging/run.py", '"""\n__Env__\n\nENV: full_datasets\n"""\ncode\n')
     errors, warnings = validate_workspace(ws)
     assert errors == [] and warnings == []
     assert "PYAUTO_SMALL_DATASETS" not in resolve_clean(

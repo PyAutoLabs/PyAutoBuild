@@ -185,38 +185,50 @@ declares its own env intent **in-file**, and the pattern overrides that only
 express that intent are deleted. Stage 1 lands the mechanism; the workspace
 migrations follow in later PRs.
 
-**Syntax — two forms, one canonical.** A script declares its env intent in a
-docstring section, the `__Env__` block, which is now **the canonical form in
-every repo** (user workspaces and `_test` repos alike). A legacy `# ENV:`
-comment form is still parsed and valid for the transition, but is **deprecated
-pending removal** — a later validator flip will error on it once every repo has
-migrated. Both forms carry the identical token vocabulary and resolve
-identically; a file may carry **exactly one** declaration in **either** form
-(any second declaration, in any mix, is a validator/resolver error).
+**Syntax — one form.** A script declares its env intent in the `__Env__`
+docstring section, **the only form in every repo** (user workspaces and `_test`
+repos alike). The legacy `# ENV:` comment form has been **REMOVED** now that
+every repo has migrated: a `# ENV:` line anchored at column 0 now **raises**
+rather than parsing. A file may carry **exactly one** `__Env__` declaration (a
+second header, in any block, is a validator/resolver error).
 
-*Canonical `__Env__` docstring form.* A triple-quoted block whose first non-blank
-line is the `__Env__` header (a trailing parenthetical such as
-`(Developer Only)` is allowed), containing **exactly one** `ENV: <tokens>` line
-(no leading `#`):
+*Canonical `__Env__` docstring form — a section appended INSIDE an existing
+docstring.* Following the workspace doctrine that multiple `__Section__` headers
+share **one** docstring (never close-then-reopen — a `"""` immediately followed
+by another `"""`), `__Env__` is the **last section of an existing docstring**:
+the final docstring in user-facing scripts, the module docstring in `_test`
+scripts. The header is a column-0 `__Env__` line (a trailing parenthetical such
+as `(Developer Only)` is allowed) appearing **anywhere inside** the block, and
+**exactly one** `ENV: <tokens>` line (no leading `#`) must follow it before the
+closing delimiter:
 
 ```python
 """
+Wrap Up
+-------
+
+...closing tutorial prose for this script...
+
 __Env__ (Developer Only)
 
 Not user documentation: this section configures the automated test harness.
-...
 
 ENV: jax full_datasets
 """
 ```
 
-**Placement conventions** (where the block lives depends on the repo's
+*Fallback — a standalone `__Env__` docstring.* A script with **no adjacent
+docstring** to append to may carry the section as its own `"""__Env__ … """`
+block. This is the only case where a dedicated `__Env__`-only docstring is
+legal; where a docstring already exists, the section is merged into it.
+
+**Placement conventions** (where the section lives depends on the repo's
 audience):
 
 | Repos | Placement | Header |
 |-------|-----------|--------|
-| User-facing workspaces (`autolens_workspace`, `autogalaxy_workspace`) **and the HowTo lectures** (`HowToFit`, `HowToGalaxy`, `HowToLens`) | **Very bottom** of the script | `__Env__ (Developer Only)` + the developer-only note |
-| `_test` repos (`autolens_workspace_test`, `autogalaxy_workspace_test`, `autofit_workspace_test`) | **Near top**, immediately after the module's opening docstring | `__Env__` + a short one-line note |
+| User-facing workspaces (`autolens_workspace`, `autogalaxy_workspace`) **and the HowTo lectures** (`HowToFit`, `HowToGalaxy`, `HowToLens`) | End of the **final docstring** (bottom of the script) | `__Env__ (Developer Only)` + the developer-only note |
+| `_test` repos (`autolens_workspace_test`, `autogalaxy_workspace_test`, `autofit_workspace_test`) | End of the **module docstring** (top of the script) | `__Env__` + a short one-line note |
 
 - **User-facing workspaces and the HowTo lectures** are teaching material read
   top-to-bottom as tutorial prose, so the harness config goes **last**, out of
@@ -231,19 +243,21 @@ audience):
   existed there at the #187 migration — but the rule is fixed for when one is
   added.)
 - **`_test` repos** are code-heavy / doc-light and are **not** doc-generated, so
-  the block sits near the **top** where a developer reading the harness script
-  sees it immediately, with a short note (no "stripped from notebooks" claim,
-  which would not apply).
+  the section sits at the end of the **module docstring** (top of the script)
+  where a developer reading the harness script sees it immediately, with a short
+  note (no "stripped from notebooks" claim, which would not apply).
 
-*Legacy `# ENV:` comment form (deprecated).* A single comment line, `# ENV:` at
-column 0 followed by whitespace-separated tokens:
+*Legacy `# ENV:` comment form (REMOVED).* The single-comment-line form,
+`# ENV: <tokens>` at column 0, has been removed now that every repo carries the
+`__Env__` section. A `# ENV:` line anchored at column 0 now **raises**:
 
-```python
-# ENV: jax full_datasets
+```
+<path>: the '# ENV:' comment form was removed — declare env requirements in an
+'__Env__' docstring section instead (docs/env_profile_redesign.md §10)
 ```
 
-An unknown token is an error. The comment is matched anchored — an indented or
-trailing `# ENV:` is prose, not a declaration. The parser for both forms is
+An indented or trailing `# ENV:` is still prose (only a column-0 match raises).
+The parser is
 `autohands/env_config.read_env_declaration(path) -> list[str] | None`.
 
 **Token table.** Each token UNSETS the managed var(s) it names:
