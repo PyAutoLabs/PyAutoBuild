@@ -105,3 +105,43 @@ def test_resolve_clean_ignores_ambient_env(tmp_path, monkeypatch):
     monkeypatch.setenv("PYAUTO_DISABLE_JAX", "1")
     env = resolve_clean(Path("scripts/a.py"), {"defaults": {}})
     assert "PYAUTO_DISABLE_JAX" not in env
+
+
+# --- derive_jax_markers (docs/env_profile_redesign.md §3, #161 step 4) --------
+
+DERIVING_RELEASE = (
+    'defaults: {PYAUTO_DISABLE_JAX: "1"}\nderive_jax_markers: true\n'
+)
+
+
+def test_deriving_profile_is_accepted_and_marked_scripts_resolve_jax(tmp_path):
+    ws = _workspace(
+        tmp_path, GOOD_SMOKE, DERIVING_RELEASE, ["jax_assertions/nnls.py", "imaging/run.py"]
+    )
+    errors, warnings = validate_workspace(ws, strict_derivation=True, strict_markers=True)
+    assert errors == [] and warnings == []
+    cfg = {"defaults": {"PYAUTO_DISABLE_JAX": "1"}, "derive_jax_markers": True}
+    assert resolve_clean(Path("scripts/jax_assertions/nnls.py"), cfg) == {
+        "PYAUTO_DISABLE_JAX": "0"
+    }
+    assert resolve_clean(Path("scripts/imaging/run.py"), cfg) == {
+        "PYAUTO_DISABLE_JAX": "1"
+    }
+
+
+def test_non_bool_derive_jax_markers_is_an_error(tmp_path):
+    # A quoted "true" is a truthy str, and a quoted "false" would be too —
+    # the resolver would silently derive either way, so the type is enforced.
+    release = 'defaults: {PYAUTO_DISABLE_JAX: "1"}\nderive_jax_markers: "false"\n'
+    ws = _workspace(tmp_path, GOOD_SMOKE, release, ["imaging/run.py"])
+    errors, _ = validate_workspace(ws)
+    assert any("derive_jax_markers must be a YAML bool" in e for e in errors)
+
+
+def test_init_py_is_not_a_script(tmp_path):
+    # Package inits are plumbing the runner never executes — a marked
+    # jax_assertions/__init__.py must not trip the marker check.
+    release = 'defaults: {PYAUTO_DISABLE_JAX: "1"}\noverrides: []\n'
+    ws = _workspace(tmp_path, GOOD_SMOKE, release, ["jax_assertions/__init__.py"])
+    errors, warnings = validate_workspace(ws, strict_markers=True)
+    assert errors == [] and warnings == []

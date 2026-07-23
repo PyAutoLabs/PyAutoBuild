@@ -65,18 +65,40 @@ def build_env_for_script(
         if key.startswith(MANAGED_ENV_PREFIXES):
             del env[key]
 
-    for key, value in env_config.get("defaults", {}).items():
+    return apply_profile(env, file, env_config)
+
+
+def apply_profile(
+    env: Dict[str, str],
+    file: Path,
+    env_config: dict,
+) -> Dict[str, str]:
+    """Apply a profile to a base env dict: defaults, then overrides in order,
+    then the JAX-marker derivation (when the profile opts in).
+
+    The single resolution path shared by the runner (``build_env_for_script``,
+    base = scrubbed ambient env) and the validator (``resolve_clean``, base =
+    empty dict) — docs/env_profile_redesign.md §5. Mutates and returns ``env``.
+    """
+    for key, value in (env_config.get("defaults") or {}).items():
         env[key] = str(value)
 
     file = Path(file)
 
-    for override in env_config.get("overrides", []):
+    for override in env_config.get("overrides") or []:
         pattern = override["pattern"]
         if _pattern_matches(file, pattern):
-            for var_name in override.get("unset", []):
+            for var_name in override.get("unset") or []:
                 env.pop(var_name, None)
-            for key, value in override.get("set", {}).items():
+            for key, value in (override.get("set") or {}).items():
                 env[key] = str(value)
+
+    # The derivation rule (docs/env_profile_redesign.md §3): a profile that
+    # declares `derive_jax_markers: true` runs JAX-marked scripts with JAX on.
+    # Applied last — the marker set is derived from names, never enumerated,
+    # so a profile override cannot (and must not) carve exceptions out of it.
+    if env_config.get("derive_jax_markers") and is_jax_marked(file):
+        env["PYAUTO_DISABLE_JAX"] = "0"
 
     return env
 
@@ -103,6 +125,18 @@ def args_for_script(
     if not raw or not str(raw).strip():
         return []
     return shlex.split(str(raw))
+
+
+def is_jax_marked(script: Path) -> bool:
+    """The derivation rule: a script is JAX-intent iff a path segment starts
+    with ``jax_`` or a segment/stem ends with ``_jax`` or ``_jit``
+    (docs/env_profile_redesign.md §3). A mid-stem marker (``*_jit_*``) does
+    NOT match — files carry the marker as a prefix/suffix, by convention."""
+    for part in Path(script).parts:
+        stem = part[:-3] if part.endswith(".py") else part
+        if stem.startswith("jax_") or stem.endswith("_jax") or stem.endswith("_jit"):
+            return True
+    return False
 
 
 def _pattern_matches(file: Path, pattern: str) -> bool:

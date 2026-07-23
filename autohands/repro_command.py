@@ -27,7 +27,7 @@ import sys
 from pathlib import Path
 from typing import Dict, Optional
 
-from env_config import _pattern_matches, load_env_config
+from env_config import apply_profile, load_env_config
 
 
 def _find_workspace_root(script: Path) -> Optional[Path]:
@@ -50,20 +50,7 @@ def canonical_env_for_script(file: Path, env_config: Optional[dict]) -> Dict[str
     if env_config is None:
         return {}
 
-    env: Dict[str, str] = {}
-
-    for key, value in env_config.get("defaults", {}).items():
-        env[key] = str(value)
-
-    for override in env_config.get("overrides", []):
-        pattern = override["pattern"]
-        if _pattern_matches(file, pattern):
-            for var_name in override.get("unset", []):
-                env.pop(var_name, None)
-            for key, value in override.get("set", {}).items():
-                env[key] = str(value)
-
-    return env
+    return apply_profile({}, file, env_config)
 
 
 def repro_command(script_path: str) -> str:

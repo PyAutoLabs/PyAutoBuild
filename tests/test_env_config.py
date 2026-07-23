@@ -83,3 +83,61 @@ def test_non_pyauto_infra_vars_pass_through(monkeypatch):
 def test_none_config_inherits_unchanged(monkeypatch):
     monkeypatch.setenv("PYAUTO_SKIP_API_GATE", "1")
     assert build_env_for_script(Path("scripts/x.py"), None) is None
+
+
+# --- JAX-marker derivation (docs/env_profile_redesign.md §3, #161 step 4) -----
+from env_config import is_jax_marked  # noqa: E402
+
+DERIVING_RELEASE = {
+    "defaults": {"PYAUTO_DISABLE_JAX": "1"},
+    "derive_jax_markers": True,
+}
+
+
+def test_derivation_enables_jax_for_marked_script():
+    env = build_env_for_script(Path("scripts/jax_assertions/nnls.py"), DERIVING_RELEASE)
+    assert env["PYAUTO_DISABLE_JAX"] == "0"
+
+
+def test_derivation_leaves_unmarked_script_on_default():
+    env = build_env_for_script(Path("scripts/imaging/run.py"), DERIVING_RELEASE)
+    assert env["PYAUTO_DISABLE_JAX"] == "1"
+
+
+def test_no_derivation_key_means_no_derivation():
+    cfg = {"defaults": {"PYAUTO_DISABLE_JAX": "1"}}
+    env = build_env_for_script(Path("scripts/jax_assertions/nnls.py"), cfg)
+    assert env["PYAUTO_DISABLE_JAX"] == "1"
+
+
+def test_derivation_applies_after_overrides():
+    # The marker set is derived, never enumerated — an override cannot carve
+    # a marked script back out of it.
+    cfg = {
+        "defaults": {"PYAUTO_DISABLE_JAX": "1"},
+        "overrides": [
+            {"pattern": "jax_assertions/", "set": {"PYAUTO_DISABLE_JAX": "1"}}
+        ],
+        "derive_jax_markers": True,
+    }
+    env = build_env_for_script(Path("scripts/jax_assertions/nnls.py"), cfg)
+    assert env["PYAUTO_DISABLE_JAX"] == "0"
+
+
+def test_is_jax_marked_prefix_suffix_forms():
+    assert is_jax_marked(Path("scripts/jax_grad/run.py"))
+    assert is_jax_marked(Path("scripts/hessian_jax.py"))
+    assert is_jax_marked(Path("scripts/imaging/modeling_visualization_jit.py"))
+    assert not is_jax_marked(Path("scripts/imaging/visualization.py"))
+
+
+def test_is_jax_marked_mid_stem_marker_does_not_match():
+    # The decided shape (human, 2026-07-23): mid-stem markers are NOT matched;
+    # such files are renamed to carry the suffix (e.g.
+    # modeling_visualization_jit_delaunay.py -> ..._delaunay_jit.py).
+    assert not is_jax_marked(
+        Path("scripts/imaging/modeling_visualization_jit_delaunay.py")
+    )
+    assert is_jax_marked(
+        Path("scripts/imaging/modeling_visualization_delaunay_jit.py")
+    )

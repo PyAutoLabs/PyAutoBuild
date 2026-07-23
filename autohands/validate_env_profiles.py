@@ -35,36 +35,18 @@ from typing import Any
 
 import yaml
 
-from env_config import _pattern_matches
+from env_config import _pattern_matches, apply_profile, is_jax_marked  # noqa: F401
 
-ALLOWED_TOP_KEYS = {"defaults", "overrides", "args_default"}
+ALLOWED_TOP_KEYS = {"defaults", "overrides", "args_default", "derive_jax_markers"}
 ALLOWED_OVERRIDE_KEYS = {"pattern", "set", "unset"}
 PROFILE_FILES = ("env_vars.yaml", "env_vars_release.yaml")
-JAX_MARKERS = ("jax_", "_jax", "_jit")
-
-
-def is_jax_marked(script: Path) -> bool:
-    """The derivation rule: a script is JAX-intent iff a path segment starts
-    with ``jax_`` or a segment/stem ends with ``_jax`` or ``_jit``."""
-    for part in script.parts:
-        stem = part[:-3] if part.endswith(".py") else part
-        if stem.startswith("jax_") or stem.endswith("_jax") or stem.endswith("_jit"):
-            return True
-    return False
 
 
 def resolve_clean(script: Path, cfg: dict) -> dict[str, str]:
-    """Resolve a script's profile env from an empty base (no ambient env)."""
-    env: dict[str, str] = {}
-    for k, v in (cfg.get("defaults") or {}).items():
-        env[k] = str(v)
-    for override in cfg.get("overrides") or []:
-        if _pattern_matches(script, override["pattern"]):
-            for k in override.get("unset") or []:
-                env.pop(k, None)
-            for k, v in (override.get("set") or {}).items():
-                env[k] = str(v)
-    return env
+    """Resolve a script's profile env from an empty base (no ambient env),
+    through the same ``apply_profile`` path the runner uses — defaults,
+    overrides, then the JAX-marker derivation."""
+    return apply_profile({}, script, cfg)
 
 
 def check_profile(
@@ -87,6 +69,14 @@ def check_profile(
     for key in cfg:
         if key not in ALLOWED_TOP_KEYS:
             errors.append(f"{name}: unknown top-level key '{key}'")
+
+    if "derive_jax_markers" in cfg and not isinstance(cfg["derive_jax_markers"], bool):
+        # A quoted "true"/"false" is a truthy str either way — the resolver
+        # would silently do the wrong thing for "false", so fail loudly here.
+        errors.append(
+            f"{name}: derive_jax_markers must be a YAML bool, "
+            f"got {cfg['derive_jax_markers']!r}"
+        )
 
     overrides = cfg.get("overrides") or []
     if not isinstance(overrides, list):
@@ -144,7 +134,13 @@ def validate_workspace(
     root: Path, strict_derivation: bool = False, strict_markers: bool = False
 ) -> tuple[list[str], list[str]]:
     scripts_dir = root / "scripts"
-    scripts = sorted(scripts_dir.rglob("*.py")) if scripts_dir.is_dir() else []
+    # __init__.py files are package plumbing, not runnable scripts — the
+    # runner never executes them, so the marker check must not count them.
+    scripts = (
+        sorted(p for p in scripts_dir.rglob("*.py") if p.name != "__init__.py")
+        if scripts_dir.is_dir()
+        else []
+    )
     errors: list[str] = []
     warnings: list[str] = []
     for fname in PROFILE_FILES:
