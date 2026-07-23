@@ -1,6 +1,6 @@
 # Pre-Build: Format, Generate, Push, Dispatch
 
-Prepare all workspace repositories for a release build, then dispatch the GitHub Actions release workflow. This skill is a thin wrapper around `PyAutoHands/bin/autobuild pre_build`, mirroring the pattern used by `/verify_install`.
+Prepare all workspace repositories for a release build, then dispatch the GitHub Actions release workflow. This skill is a thin wrapper around `PyAutoHands/bin/autohands pre_build`, mirroring the pattern used by `/verify_install`.
 
 A **PyAutoHands** skill — Build is the release/packaging executor, and
 this is a **release-execution** entry point (format → generate → push →
@@ -44,12 +44,12 @@ user**.
 
 Then ask the user for the minor version number (default: 1).
 
-### 2. Run `autobuild pre_build`
+### 2. Run `autohands pre_build`
 
 Invoke the bash entry point directly:
 
 ```bash
-bash $HOME/Code/PyAutoLabs/PyAutoHands/bin/autobuild pre_build <minor_version>
+bash $HOME/Code/PyAutoLabs/PyAutoHands/bin/autohands pre_build <minor_version>
 ```
 
 The script handles every mechanical step of the pre-build flow:
@@ -88,5 +88,5 @@ The release workflow is now running. Use the `review-release` skill
 
 ## Notes
 
-- The same operation is callable from the shell as `autobuild pre_build <minor>` (or `autobuild-help pre_build` for documentation). Use this skill when you want the agent validation and summary wrapper; use the bash CLI when you just want to fire off the build.
+- The same operation is callable from the shell as `autohands pre_build <minor>` (or `autohands-help pre_build` for documentation). Use this skill when you want the agent validation and summary wrapper; use the bash CLI when you just want to fire off the build.
 - There is no README version-bump step: the audit (`docs/pre_build_failure_audit.md`, #156) found the old local sed's output was never staged and the runner-side step was removed under #120 — README pin ownership is a Phase 4 decision of the build-chain campaign (#155).

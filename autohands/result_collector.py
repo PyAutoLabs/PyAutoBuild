@@ -170,7 +170,7 @@ def parse_no_run_reasons(yaml_path: Path, project: str) -> dict:
 
     Supports both formats:
     - Flat list (workspace): every ``- entry`` line is relevant
-    - Keyed dict (legacy autobuild): only entries under the matching project key
+    - Keyed dict (legacy autohands): only entries under the matching project key
     """
     reasons = {}
     has_project_keys = False

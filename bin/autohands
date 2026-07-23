@@ -1,23 +1,23 @@
 #!/usr/bin/env bash
-# autobuild — unified bash CLI for PyAutoHands operations.
+# autohands — unified bash CLI for PyAutoHands operations.
 #
-# Run `autobuild help` for the list of subcommands.
-# Run `autobuild help <subcommand>` for full details on one subcommand.
+# Run `autohands help` for the list of subcommands.
+# Run `autohands help <subcommand>` for full details on one subcommand.
 #
 # Recommended alias for ~/.bashrc:
-#   alias autobuild-help='$HOME/Code/PyAutoLabs/PyAutoHands/bin/autobuild help'
+#   alias autohands-help='$HOME/Code/PyAutoLabs/PyAutoHands/bin/autohands help'
 
 set -u
 
 SELF="$(readlink -f "$0")"
 REPO="$(cd "$(dirname "$SELF")/.." && pwd)"
 PYAUTOBASE="$(cd "$REPO/.." && pwd)"
-AUTOBUILD_DIR="$REPO/autobuild"
+AUTOHANDS_DIR="$REPO/autohands"
 ADMIN_JAMMY="$PYAUTOBASE/admin_jammy"
 
 # ----- subcommand registration -----
 #
-# SUBCOMMAND_ORDER drives the layout of `autobuild help`. Entries beginning
+# SUBCOMMAND_ORDER drives the layout of `autohands help`. Entries beginning
 # with "# " are rendered as section headers; everything else is a real
 # subcommand and must have a matching SHORT_DESC entry plus cmd_<name> and
 # help_<name> functions.
@@ -67,7 +67,7 @@ declare -A SHORT_DESC=(
   [generate_release_notes]="Generate release notes from merged PRs and create GitHub Releases"
   [create_analysis_issue]="Open a GitHub issue with the release report and assign Copilot"
   [tag_and_merge]="Commit and tag every library repo for a release"
-  [repro_command]="Emit the shell command autobuild uses to run one script (for triage handoffs)"
+  [repro_command]="Emit the shell command autohands uses to run one script (for triage handoffs)"
   [watch]="Start the PyAutoHeart monitoring daemon (Ctrl-C to stop)"
   [status]="Print the latest PyAutoHeart state cache with green/yellow/red"
   [tick]="Force one PyAutoHeart refresh cycle"
@@ -75,23 +75,23 @@ declare -A SHORT_DESC=(
   [help]="List subcommands or show details for one"
 )
 
-# _python_in_autobuild <script> [args...]
-# Run a Python tool from autobuild/ with PYTHONPATH set so its sibling
+# _python_in_autohands <script> [args...]
+# Run a Python tool from autohands/ with PYTHONPATH set so its sibling
 # modules (build_util, generate_autofit, env_config, result_collector)
 # resolve correctly. Inherits the user's cwd unchanged — several tools
 # (run.py, run_python.py, generate.py) read config from cwd.
-_python_in_autobuild() {
+_python_in_autohands() {
   local script="$1"
   shift
-  PYTHONPATH="$AUTOBUILD_DIR${PYTHONPATH:+:$PYTHONPATH}" \
-    python "$AUTOBUILD_DIR/$script" "$@"
+  PYTHONPATH="$AUTOHANDS_DIR${PYTHONPATH:+:$PYTHONPATH}" \
+    python "$AUTOHANDS_DIR/$script" "$@"
 }
 
 # ----- Build and release pipeline -----
 
 help_pre_build() {
   cat <<'EOF'
-autobuild pre_build [minor_version] [skip_release]
+autohands pre_build [minor_version] [skip_release]
 
 Run black + generate notebooks + commit & push for every workspace repo,
 then commit & push PyAutoHands itself, then dispatch the GitHub Actions
@@ -116,7 +116,7 @@ cmd_pre_build() {
 
 help_verify_install() {
   cat <<'EOF'
-autobuild verify_install [CHECKS...] [--version VERSION] [--keep]
+autohands verify_install [CHECKS...] [--version VERSION] [--keep]
 
 Shim → `pyauto-heart verify_install`. Release-readiness checking is Heart's
 job now (PyAutoHands is a pure executor), so this delegates to PyAutoHeart,
@@ -134,7 +134,7 @@ cmd_verify_install() {
 
 help_url_check() {
   cat <<'EOF'
-autobuild url_check [directory]
+autohands url_check [directory]
 
 Shim → `pyauto-heart url_check`. URL hygiene is PyAutoHeart's job now
 (PyAutoHands is a pure executor). Scans rst/md/ipynb/py under <directory>
@@ -152,7 +152,7 @@ cmd_url_check() {
 
 help_bump_colab_urls() {
   cat <<'EOF'
-autobuild bump_colab_urls <new-tag>
+autohands bump_colab_urls <new-tag>
 
 Rewrite every URL of the form
   colab.research.google.com/github/PyAutoLabs/<repo>/blob/<old-tag>/...
@@ -167,14 +167,14 @@ jobs so README/docs Colab links always pin to the just-released tag.
 EOF
 }
 cmd_bump_colab_urls() {
-  bash "$AUTOBUILD_DIR/bump_colab_urls.sh" "$@"
+  bash "$AUTOHANDS_DIR/bump_colab_urls.sh" "$@"
 }
 
 # ----- Workspace operations -----
 
 help_generate() {
   cat <<'EOF'
-autobuild generate <project> [--report-dir DIR]
+autohands generate <project> [--report-dir DIR]
 
 Convert every script in scripts/ to a Jupyter notebook in notebooks/, run
 from inside the workspace root. The <project> argument selects the Colab
@@ -188,12 +188,12 @@ Run from the workspace root, not from PyAutoHands.
 EOF
 }
 cmd_generate() {
-  _python_in_autobuild generate.py "$@"
+  _python_in_autohands generate.py "$@"
 }
 
 help_run() {
   cat <<'EOF'
-autobuild run <project> <directory> [--visualise] [--report-dir DIR] [--env-config FILE]
+autohands run <project> <directory> [--visualise] [--report-dir DIR] [--env-config FILE]
 
 Execute Jupyter notebooks in <directory> for <project>, skipping files
 listed in the workspace's config/build/no_run.yaml (required).
@@ -211,12 +211,12 @@ Run from the workspace root.
 EOF
 }
 cmd_run() {
-  _python_in_autobuild run.py "$@"
+  _python_in_autohands run.py "$@"
 }
 
 help_run_python() {
   cat <<'EOF'
-autobuild run_python <project> <directory> [--report-dir DIR] [--env-config FILE]
+autohands run_python <project> <directory> [--report-dir DIR] [--env-config FILE]
 
 Execute Python scripts in <directory> for <project>, skipping files
 listed in config/build/no_run.yaml.
@@ -231,12 +231,12 @@ Run from the workspace root.
 EOF
 }
 cmd_run_python() {
-  _python_in_autobuild run_python.py "$@"
+  _python_in_autohands run_python.py "$@"
 }
 
 help_run_all() {
   cat <<'EOF'
-autobuild run_all [WORKSPACE...] [--results-dir DIR] [--timeout-secs N]
+autohands run_all [WORKSPACE...] [--results-dir DIR] [--timeout-secs N]
 
 Run workspace scripts across one or more workspaces and produce summary
 reports.
@@ -256,14 +256,14 @@ Each workspace also gets a test_report.md in its root for easy access.
 EOF
 }
 cmd_run_all() {
-  _python_in_autobuild run_all.py "$@"
+  _python_in_autohands run_all.py "$@"
 }
 
 # ----- Release support -----
 
 help_script_matrix() {
   cat <<'EOF'
-autobuild script_matrix <project...>
+autohands script_matrix <project...>
 
 Print a JSON matrix of {name, directory} pairs for GitHub Actions matrix
 strategy. <project> arguments are workspace names whose scripts/ directory
@@ -274,12 +274,12 @@ run_notebooks job matrices.
 EOF
 }
 cmd_script_matrix() {
-  _python_in_autobuild script_matrix.py "$@"
+  _python_in_autohands script_matrix.py "$@"
 }
 
 help_aggregate_results() {
   cat <<'EOF'
-autobuild aggregate_results <results-dir> [--output JSON] [--markdown MD]
+autohands aggregate_results <results-dir> [--output JSON] [--markdown MD]
 
 Aggregate per-job JSON result files from <results-dir> into a consolidated
 release readiness report.
@@ -293,12 +293,12 @@ Used by the analyze_results job in release.yml.
 EOF
 }
 cmd_aggregate_results() {
-  _python_in_autobuild aggregate_results.py "$@"
+  _python_in_autohands aggregate_results.py "$@"
 }
 
 help_slow_skip_check() {
   cat <<'EOF'
-autobuild slow_skip_check [WORKSPACE_PATH...]
+autohands slow_skip_check [WORKSPACE_PATH...]
 
 Scan workspace no_run.yaml files for entries tagged as SLOW-skips or
 NEEDS_FIX-skips and surface them so they cannot be silently forgotten.
@@ -311,12 +311,12 @@ Output is a warning banner suitable for printing in CI logs.
 EOF
 }
 cmd_slow_skip_check() {
-  _python_in_autobuild slow_skip_check.py "$@"
+  _python_in_autohands slow_skip_check.py "$@"
 }
 
 help_generate_release_notes() {
   cat <<'EOF'
-autobuild generate_release_notes --version <VERSION> --repo <OWNER/REPO> [--dry-run]
+autohands generate_release_notes --version <VERSION> --repo <OWNER/REPO> [--dry-run]
 
 Generate release notes from merged PRs and create GitHub Releases. For
 downstream repos (PyAutoGalaxy, PyAutoLens), notes include upstream
@@ -329,12 +329,12 @@ Arguments:
 EOF
 }
 cmd_generate_release_notes() {
-  _python_in_autobuild generate_release_notes.py "$@"
+  _python_in_autohands generate_release_notes.py "$@"
 }
 
 help_create_analysis_issue() {
   cat <<'EOF'
-autobuild create_analysis_issue <report.json> --run-id <ID> [--repo <OWNER/REPO>] [--dry-run]
+autohands create_analysis_issue <report.json> --run-id <ID> [--repo <OWNER/REPO>] [--dry-run]
 
 Create a GitHub Issue with the release readiness report and assign
 Copilot for analysis.
@@ -347,12 +347,12 @@ Arguments:
 EOF
 }
 cmd_create_analysis_issue() {
-  _python_in_autobuild create_analysis_issue.py "$@"
+  _python_in_autohands create_analysis_issue.py "$@"
 }
 
 help_tag_and_merge() {
   cat <<'EOF'
-autobuild tag_and_merge --version <VERSION>
+autohands tag_and_merge --version <VERSION>
 
 Commit any pending changes and tag HEAD as v<VERSION> in every library
 repo: PyAutoNerves, PyAutoFit, PyAutoArray, PyAutoGalaxy, PyAutoLens.
@@ -362,23 +362,23 @@ a tag named "v<VERSION>". Stops on the first failing repo.
 EOF
 }
 cmd_tag_and_merge() {
-  bash "$AUTOBUILD_DIR/tag_and_merge.sh" "$@"
+  bash "$AUTOHANDS_DIR/tag_and_merge.sh" "$@"
 }
 
 # ----- Triage support -----
 
 help_repro_command() {
   cat <<'EOF'
-autobuild repro_command <script_path>
+autohands repro_command <script_path>
 
-Print the exact shell command `autobuild run_python` would have used to
+Print the exact shell command `autohands run_python` would have used to
 execute one workspace script — including all environment variables from
 the workspace's config/build/env_vars.yaml (defaults + matching
 per-pattern overrides).
 
 Intended for triage handoffs: when pasting a failing script into a chat
 or issue, run this first so the reader gets a self-contained command
-that reproduces the autobuild failure exactly (not just `python3 <file>`,
+that reproduces the autohands failure exactly (not just `python3 <file>`,
 which omits PYAUTO_TEST_MODE / PYAUTO_SMALL_DATASETS / etc.).
 
 Arguments:
@@ -391,7 +391,7 @@ Run the printed command from the PyAutoLabs base directory.
 EOF
 }
 cmd_repro_command() {
-  _python_in_autobuild repro_command.py "$@"
+  _python_in_autohands repro_command.py "$@"
 }
 
 # ----- Monitoring daemon (delegates to PyAutoHeart) -----
@@ -421,7 +421,7 @@ _heart_resolve() {
     return 0
   fi
   cat >&2 <<EOF
-autobuild: pyauto-heart was not found on PATH or at the sibling checkout
+autohands: pyauto-heart was not found on PATH or at the sibling checkout
 $HOME/Code/PyAutoLabs/PyAutoHeart/.
 
 PyAutoHeart is not pip-installed — like the other PyAuto repos it runs from
@@ -437,7 +437,7 @@ EOF
 
 help_watch() {
   cat <<'EOF'
-autobuild watch [interval_seconds]
+autohands watch [interval_seconds]
 
 Shim → `pyauto-heart watch`. Run the PyAutoHeart monitoring daemon in
 the foreground, refreshing the cached state every N seconds (default
@@ -454,11 +454,11 @@ cmd_watch() {
 
 help_status() {
   cat <<'EOF'
-autobuild status [--json] [--quiet] [--no-color]
+autohands status [--json] [--quiet] [--no-color]
 
 Shim → `pyauto-heart status`. Print the most recent Heart state cache
 with green/yellow/red colouring. Exits non-zero if no cache exists
-(run `autobuild tick` first).
+(run `autohands tick` first).
 EOF
 }
 cmd_status() {
@@ -469,7 +469,7 @@ cmd_status() {
 
 help_tick() {
   cat <<'EOF'
-autobuild tick
+autohands tick
 
 Shim → `pyauto-heart tick`. Force one PyAutoHeart refresh cycle: every
 check (repo state, CI status, open PRs, worktree drift, script
@@ -484,7 +484,7 @@ cmd_tick() {
 
 help_fix() {
   cat <<'EOF'
-autobuild fix <topic> [args...]
+autohands fix <topic> [args...]
 
 Shim → `pyauto-heart fix`. Bundle context for a specific failing topic
 and emit a Claude Code invocation you can paste/run.
@@ -505,7 +505,7 @@ cmd_fix() {
 
 help_help() {
   cat <<'EOF'
-autobuild help [subcommand]
+autohands help [subcommand]
 
 With no argument, list every subcommand with a one-line description.
 With a subcommand, print the full docstring for that subcommand.
@@ -514,11 +514,11 @@ EOF
 cmd_help() {
   if [ $# -eq 0 ]; then
     cat <<'EOF'
-autobuild — unified CLI for PyAutoHands operations.
+autohands — unified CLI for PyAutoHands operations.
 
-Usage: autobuild <subcommand> [args...]
-       autobuild help [subcommand]
-       autobuild <subcommand> --help
+Usage: autohands <subcommand> [args...]
+       autohands help [subcommand]
+       autohands <subcommand> --help
 
 Subcommands:
 EOF
@@ -532,15 +532,15 @@ EOF
     done
     cat <<'EOF'
 
-Run `autobuild help <subcommand>` to see full documentation.
+Run `autohands help <subcommand>` to see full documentation.
 EOF
     return 0
   fi
 
   local name="$1"
   if ! declare -f "help_$name" > /dev/null; then
-    echo "autobuild: unknown subcommand '$name'" >&2
-    echo "Run 'autobuild help' for the list of subcommands." >&2
+    echo "autohands: unknown subcommand '$name'" >&2
+    echo "Run 'autohands help' for the list of subcommands." >&2
     return 2
   fi
   "help_$name"
@@ -559,8 +559,8 @@ main() {
   esac
   shift
   if ! declare -f "cmd_$sub" > /dev/null; then
-    echo "autobuild: unknown subcommand '$sub'" >&2
-    echo "Run 'autobuild help' for the list of subcommands." >&2
+    echo "autohands: unknown subcommand '$sub'" >&2
+    echo "Run 'autohands help' for the list of subcommands." >&2
     return 2
   fi
   case "${1:-}" in

@@ -14,12 +14,12 @@ set -e
 
 MINOR_VERSION="${1:-1}"
 
-# Resolve PYAUTOBASE from this script's location (same idiom as bin/autobuild)
+# Resolve PYAUTOBASE from this script's location (same idiom as bin/autohands)
 # so pre_build.sh works from any checkout — Linux, WSL, anywhere.
 SELF="$(readlink -f "$0")"
 PYAUTOBASE="$(cd "$(dirname "$SELF")/.." && pwd)"
-AUTOBUILD="$PYAUTOBASE/PyAutoHands/autobuild"
-PYTHONPATH_EXTRA="$AUTOBUILD"
+AUTOHANDS="$PYAUTOBASE/PyAutoHands/autohands"
+PYTHONPATH_EXTRA="$AUTOHANDS"
 
 # (A `VERSION="$(date …).$MINOR_VERSION"` string used to be computed here for the
 # README version-pin sed. That sed was deleted with the pin bump, and the pins
@@ -57,11 +57,11 @@ run_workspace() {
 
     if [ "$generate" = "true" ]; then
         echo "  Running generate.py ($project)..."
-        PYTHONPATH="$PYTHONPATH_EXTRA" python "$AUTOBUILD/generate.py" "$project"
+        PYTHONPATH="$PYTHONPATH_EXTRA" python "$AUTOHANDS/generate.py" "$project"
     fi
 
     echo "  Checking dataset allowlist (PyAutoBuild#126 leg 4)..."
-    python3 "$AUTOBUILD/check_dataset_allowlist.py" || {
+    python3 "$AUTOHANDS/check_dataset_allowlist.py" || {
         echo "  ABORT: tracked dataset/ contains non-allowlisted simulated data." >&2
         exit 1
     }

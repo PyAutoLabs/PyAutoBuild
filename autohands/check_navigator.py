@@ -27,8 +27,8 @@ directory), so the autolens / galaxy / fit workspaces all share this one copy.
 It lives in PyAutoHands and is invoked by the reusable ``navigator_check``
 workflow; run it locally against a workspace checkout with::
 
-    python /path/to/PyAutoHands/autobuild/check_navigator.py --root /path/to/workspace
-    python /path/to/PyAutoHands/autobuild/check_navigator.py --root /path/to/workspace --banners=warn
+    python /path/to/PyAutoHands/autohands/check_navigator.py --root /path/to/workspace
+    python /path/to/PyAutoHands/autohands/check_navigator.py --root /path/to/workspace --banners=warn
 
 An optional ignore file (default ``.navigator_check_ignore``) lists paths or
 globs (one per line, ``#`` comments allowed) that are exempt from BOTH checks.

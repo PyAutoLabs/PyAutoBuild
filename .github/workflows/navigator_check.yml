@@ -40,7 +40,7 @@ jobs:
       - name: Install dependencies
         run: pip install --quiet pyyaml
       - name: Run navigator checker (paths hard, banners fail)
-        run: python PyAutoHands/autobuild/check_navigator.py --root workspace --banners=fail
+        run: python PyAutoHands/autohands/check_navigator.py --root workspace --banners=fail
 
   staleness:
     name: Catalogue staleness
@@ -85,7 +85,7 @@ jobs:
           NAVIGATOR_PROJECT: ${{ inputs.project }}
         run: |
           cd workspace
-          python ../PyAutoHands/autobuild/regenerate_navigator.py "$NAVIGATOR_PROJECT"
+          python ../PyAutoHands/autohands/regenerate_navigator.py "$NAVIGATOR_PROJECT"
       - name: Fail if catalogue drifted from scripts
         shell: bash
         run: |

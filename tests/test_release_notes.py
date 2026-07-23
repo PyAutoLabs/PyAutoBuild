@@ -1,7 +1,7 @@
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "autobuild"))
+sys.path.insert(0, str(Path(__file__).parent.parent / "autohands"))
 
 from generate_release_notes import (
     classify_pr,

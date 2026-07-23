@@ -24,7 +24,7 @@ human-required" invariant; the dated doctrine edit ships alongside this note
 | M1 rehearsal | `release.yml` `rehearsal=true` → `rehearsal_version` job | TestPyPI wheels + `testpypi-rehearsal-version` artifact (version, packages, build SHA) |
 | M3 release-fidelity validation | `PyAutoHeart` `workspace-validation.yml` `mode=release` | Runs the workspace script matrix + `verify_install` against the rehearsed wheels; emits a `{"stage": "integrate"}` report |
 | M4 orchestrator | `pyauto-brain release validate` (`agents/conductors/release/validate.sh`) | Full Stages 0–3: preflight → unit → rehearse → integrate → ingest → verdict, with commit-SHA authority and stable exit codes |
-| The release door | `pyauto-brain release` → Build Agent release mode | The single gate implementation: vitals refresh, GREEN/YELLOW(`--force`)/RED, on pass runs `autobuild pre_build` → dispatches `release.yml` |
+| The release door | `pyauto-brain release` → Build Agent release mode | The single gate implementation: vitals refresh, GREEN/YELLOW(`--force`)/RED, on pass runs `autohands pre_build` → dispatches `release.yml` |
 | Readiness verdict | `PyAutoHeart/heart/readiness.py` | The authoritative gate; **releases require GREEN**, which requires a fresh passing release-validation report whose `commit_shas` match current `main` |
 | Live-release Slack | `release.yml` `announce_release` (`PYAUTO_RELEASE_WEBHOOK_URL`) | Success/failure announcement for live releases, including failure paging |
 

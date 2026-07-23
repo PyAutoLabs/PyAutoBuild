@@ -2,7 +2,7 @@
 
 Given a path to a workspace script (e.g.
 `autogalaxy_workspace_test/scripts/imaging/visualization.py`), print the
-exact shell command `autobuild run_python` would have used to execute
+exact shell command `autohands run_python` would have used to execute
 it — including all environment variables from the workspace's
 `config/build/env_vars.yaml` (defaults + matching per-pattern overrides).
 
@@ -14,7 +14,7 @@ Run from the PyAutoLabs base directory. The output is portable as long
 as the caller `cd`s to PyAutoLabs root first.
 
 Usage:
-    autobuild repro_command <script_path>
+    autohands repro_command <script_path>
 
 Exit codes:
     0  on success (command printed to stdout)
@@ -42,10 +42,10 @@ def canonical_env_for_script(file: Path, env_config: Optional[dict]) -> Dict[str
     """Like `env_config.build_env_for_script`, but starts from `{}` instead of
     `os.environ.copy()`.
 
-    The result is what autobuild *adds* to the environment, independent of the
+    The result is what autohands *adds* to the environment, independent of the
     developer's local shell. This is the right form for a portable reproduction
     command — the chat-side reader inherits their shell's env and just gets the
-    autobuild-specific overrides prepended.
+    autohands-specific overrides prepended.
     """
     if env_config is None:
         return {}
@@ -101,7 +101,7 @@ def repro_command(script_path: str) -> str:
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(
-        prog="autobuild repro_command",
+        prog="autohands repro_command",
         description=__doc__.strip().splitlines()[0],
     )
     parser.add_argument(
@@ -113,7 +113,7 @@ def main(argv=None) -> int:
     try:
         print(repro_command(args.script_path))
     except FileNotFoundError as e:
-        print(f"autobuild repro_command: {e}", file=sys.stderr)
+        print(f"autohands repro_command: {e}", file=sys.stderr)
         return 2
     return 0
 

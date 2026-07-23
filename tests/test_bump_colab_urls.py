@@ -2,7 +2,7 @@ import os
 import subprocess
 from pathlib import Path
 
-SCRIPT = Path(__file__).resolve().parent.parent / "autobuild" / "bump_colab_urls.sh"
+SCRIPT = Path(__file__).resolve().parent.parent / "autohands" / "bump_colab_urls.sh"
 
 
 def run(directory, tag):

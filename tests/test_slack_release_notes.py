@@ -2,7 +2,7 @@ import json
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "autobuild"))
+sys.path.insert(0, str(Path(__file__).parent.parent / "autohands"))
 
 from slack_release_notes import (
     build_failure_text,

@@ -1,7 +1,7 @@
 # PyAutoHands — Agent Guidance
 
 > **Formerly PyAutoBuild.** This repository is being renamed PyAutoBuild →
-> PyAutoHands (see [MIGRATION.md](MIGRATION.md)). The `autobuild` CLI and Python
+> PyAutoHands (see [MIGRATION.md](MIGRATION.md)). The `autohands` CLI and Python
 > package keep their names for now; only the repository/branding changes. The
 > "Build" organ shorthand and the canonical `Brain → Heart (gate) → Build
 > (execute)` call chain are updated at their source (`PyAutoBrain/ORGANISM.md`)
@@ -24,7 +24,7 @@ re-derives a gate decision; readiness is gated upstream by the Brain via
 
 Release-readiness checking is no longer Build's job. The version-skew gate, the
 deep `verify_install` suite, and URL hygiene all live in PyAutoHeart now;
-`autobuild verify_install` / `autobuild url_check` / `autobuild watch|status|
+`autohands verify_install` / `autohands url_check` / `autohands watch|status|
 tick|fix` are thin shims that delegate to `pyauto-heart`. Build keeps only the
 executor primitives: the build/notebook pipeline (`pre_build`, `generate*`,
 `run_all` / `run*`), the navigator catalogue (`navigator` /

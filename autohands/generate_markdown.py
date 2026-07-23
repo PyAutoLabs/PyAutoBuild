@@ -11,7 +11,7 @@ examples can be read on GitHub with their output images visible.
 
 Run from the workspace root, exactly like ``generate.py``:
 
-    python ../PyAutoHands/autobuild/generate_markdown.py autolens [--only <substring>]
+    python ../PyAutoHands/autohands/generate_markdown.py autolens [--only <substring>]
 
 Rules this tool enforces:
 

@@ -5,7 +5,7 @@
 # PyAutoHands
 
 > **Formerly PyAutoBuild.** The repository is being renamed PyAutoBuild →
-> PyAutoHands; see [MIGRATION.md](MIGRATION.md). The `autobuild` command and
+> PyAutoHands; see [MIGRATION.md](MIGRATION.md). The `autohands` command and
 > Python package keep their names for now — only the repository and its
 > branding change.
 
@@ -25,10 +25,10 @@ reads before dispatching a release here.
 Every operation is reachable through one dispatcher:
 
 ```bash
-bash bin/autobuild help                # list every subcommand
-bash bin/autobuild help <subcommand>   # full docstring for one
-bash bin/autobuild pre_build [minor]   # format, generate notebooks, bump, push
-bash bin/autobuild run_all             # run the workspace validation scripts
+bash bin/autohands help                # list every subcommand
+bash bin/autohands help <subcommand>   # full docstring for one
+bash bin/autohands pre_build [minor]   # format, generate notebooks, bump, push
+bash bin/autohands run_all             # run the workspace validation scripts
 ```
 
 The release pipeline (`.github/workflows/release.yml`) packages to

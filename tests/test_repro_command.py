@@ -1,4 +1,4 @@
-"""Tests for autobuild/repro_command.py.
+"""Tests for autohands/repro_command.py.
 
 These mirror the tmp_path + monkeypatch.chdir pattern used by
 test_workspace_config_precedence.py — build a fake workspace tree,
@@ -10,8 +10,8 @@ from pathlib import Path
 
 import pytest
 
-AUTOBUILD_DIR = Path(__file__).parent.parent / "autobuild"
-sys.path.insert(0, str(AUTOBUILD_DIR))
+AUTOHANDS_DIR = Path(__file__).parent.parent / "autohands"
+sys.path.insert(0, str(AUTOHANDS_DIR))
 
 import repro_command  # noqa: E402
 

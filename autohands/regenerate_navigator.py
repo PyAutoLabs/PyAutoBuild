@@ -18,8 +18,8 @@ variable, then ``autolens``.
 Run from the workspace root (CWD is the workspace to catalogue, not this
 package)::
 
-    python /path/to/PyAutoHands/autobuild/regenerate_navigator.py autogalaxy
-    NAVIGATOR_PROJECT=autofit python /path/to/PyAutoHands/autobuild/regenerate_navigator.py
+    python /path/to/PyAutoHands/autohands/regenerate_navigator.py autogalaxy
+    NAVIGATOR_PROJECT=autofit python /path/to/PyAutoHands/autohands/regenerate_navigator.py
 """
 
 import os

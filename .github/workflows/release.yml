@@ -463,7 +463,7 @@ jobs:
           fi
           # On success this embeds the full PyAutoLens notes + release-page links;
           # it falls back to the one-line summary if the release can't be fetched.
-          python3 PyAutoHands/autobuild/slack_release_notes.py \
+          python3 PyAutoHands/autohands/slack_release_notes.py \
             --version "$VERSION" \
             --result "$RESULT" \
             --run-url "$RUN_URL" \
@@ -505,7 +505,7 @@ jobs:
       env:
         GH_TOKEN: ${{ secrets[matrix.project.pat] }}
       run: |
-        python3 PyAutoHands/autobuild/generate_release_notes.py \
+        python3 PyAutoHands/autohands/generate_release_notes.py \
           --version "${{ needs.version_number.outputs.version_number }}" \
           --repo "${{ matrix.project.repo }}"
 
@@ -599,9 +599,9 @@ jobs:
       if: "${{ matrix.workspace.generate_notebooks == true }}"
       run: |
         export PYTHONPATH=$PYTHONPATH:$(pwd)/PyAutoHands
-        AUTOBUILD_PATH="$(pwd)/PyAutoHands/autobuild"
+        AUTOHANDS_PATH="$(pwd)/PyAutoHands/autohands"
         pushd workspace
-        python3 "$AUTOBUILD_PATH/generate.py" ${{ matrix.workspace.name }}
+        python3 "$AUTOHANDS_PATH/generate.py" ${{ matrix.workspace.name }}
         # Stage exactly what generate.py produces: the notebooks tree, the
         # workspace catalogue written alongside them, and the root start_here
         # notebook where one exists. The former bare `git add *.ipynb` changed
@@ -655,7 +655,7 @@ jobs:
       run: |
         VERSION="${{ needs.version_number.outputs.version_number }}"
         pushd workspace
-        bash "$GITHUB_WORKSPACE/PyAutoHands/autobuild/bump_colab_urls.sh" "$VERSION"
+        bash "$GITHUB_WORKSPACE/PyAutoHands/autohands/bump_colab_urls.sh" "$VERSION"
         # Stage tracked-file modifications only — exactly what the URL bumper
         # can produce (it rewrites existing *.rst/*.md/*.ipynb/*.py in place).
         # The former `git add -A` also swept unrelated leftovers into this
@@ -702,7 +702,7 @@ jobs:
       run: |
         VERSION="${{ needs.version_number.outputs.version_number }}"
         pushd library
-        bash "$GITHUB_WORKSPACE/PyAutoHands/autobuild/bump_colab_urls.sh" "$VERSION"
+        bash "$GITHUB_WORKSPACE/PyAutoHands/autohands/bump_colab_urls.sh" "$VERSION"
         if ! git diff --quiet; then
           # Tracked modifications only — the bumper rewrites existing files in
           # place; `git add -A` would sweep any unrelated leftovers (#156 step 2).

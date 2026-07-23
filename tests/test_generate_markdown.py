@@ -8,8 +8,8 @@ from pathlib import Path
 import pytest
 import yaml
 
-AUTOBUILD_DIR = Path(__file__).parent.parent / "autobuild"
-sys.path.insert(0, str(AUTOBUILD_DIR))
+AUTOHANDS_DIR = Path(__file__).parent.parent / "autohands"
+sys.path.insert(0, str(AUTOHANDS_DIR))
 
 import generate_markdown  # noqa: E402
 

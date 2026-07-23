@@ -9,7 +9,7 @@ Usage:
     python run_all.py howtolens                # just HowToLens
     python run_all.py euclid                   # just the Euclid pipeline
 
-Reports default to <autobuild>/../test_results/runs/<UTC-timestamp>/ with a
+Reports default to <autohands>/../test_results/runs/<UTC-timestamp>/ with a
 sibling `latest` symlink pointing at the most recent successful run, so every
 release-prep run is preserved. Pass --results-dir to override (CI uses this);
 in that mode the symlink is not touched.
@@ -28,16 +28,16 @@ import sys
 from argparse import ArgumentParser
 from pathlib import Path
 
-AUTOBUILD_DIR = Path(__file__).parent
-PYAUTOBASE = AUTOBUILD_DIR.parent.parent  # PyAutoLabs/
-RESULTS_BASE = AUTOBUILD_DIR.parent / "test_results"
+AUTOHANDS_DIR = Path(__file__).parent
+PYAUTOBASE = AUTOHANDS_DIR.parent.parent  # PyAutoLabs/
+RESULTS_BASE = AUTOHANDS_DIR.parent / "test_results"
 
 def _load_workspaces() -> dict:
-    """The run matrix, from autobuild/config/workspaces.yaml (Build policy).
+    """The run matrix, from autohands/config/workspaces.yaml (Build policy).
     Strict: the file is in-repo and load-bearing — fail loudly if absent."""
     import yaml
 
-    cfg = yaml.safe_load((AUTOBUILD_DIR / "config" / "workspaces.yaml").read_text())
+    cfg = yaml.safe_load((AUTOHANDS_DIR / "config" / "workspaces.yaml").read_text())
     return {
         key: (spec["repo"], spec["report"])
         for key, spec in cfg["run_all"].items()
@@ -100,7 +100,7 @@ def run_workspace(name, workspace_dir, project, results_dir, python, timeout_sec
         print(f"\n  Running {name} / {rel_dir} ...")
         cmd = [
             python,
-            str(AUTOBUILD_DIR / "run_python.py"),
+            str(AUTOHANDS_DIR / "run_python.py"),
             project,
             rel_dir,
             "--report-dir", str(results_dir),

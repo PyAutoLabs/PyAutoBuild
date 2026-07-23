@@ -23,7 +23,7 @@ Companion audits: `docs/pre_build_failure_audit.md` (Phase 1),
   a **stated policy** (§2), not an accident — but the enumeration mechanism is
   the same failure mode 3 that caused the five-night seed incident, and it is
   replaced (§3).
-- **Resolvers.** `autobuild/env_config.py` and
+- **Resolvers.** `autohands/env_config.py` and
   `autofit_workspace_test/.github/scripts/run_smoke.py` duplicate the
   resolution. The `build_env` cores are line-identical; the real drift is
   `load_env_config` (run_smoke hardcodes `ENV_VARS_FILE=config/build/
@@ -103,7 +103,7 @@ loud-warning-in-`af.Analysis` fix was built and killed by adversarial review
 
 ## 5. One resolver, one reader, defined baseline
 
-- **One resolver:** `autobuild/env_config.py` is canonical. `run_smoke.py`
+- **One resolver:** `autohands/env_config.py` is canonical. `run_smoke.py`
   imports it (the workspace_test repos already vendor a PyAutoBuild checkout
   in CI; where truly unavailable, a pinned copy with a drift-check beats a
   silent fork). Its hardcoded `ENV_VARS_FILE` dies with the merge.

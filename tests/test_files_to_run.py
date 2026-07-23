@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-from autobuild.build_util import find_scripts_in_folder
+from autohands.build_util import find_scripts_in_folder
 
 
 def test_script_order():

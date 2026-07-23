@@ -1,4 +1,4 @@
-"""Unit tests for autobuild/env_config.py — args_for_script() in particular.
+"""Unit tests for autohands/env_config.py — args_for_script() in particular.
 
 build_env_for_script() is exercised indirectly by
 test_workspace_config_precedence.py; here we focus on the args_default
@@ -9,8 +9,8 @@ import sys
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).parent.parent
-AUTOBUILD_DIR = PROJECT_ROOT / "autobuild"
-sys.path.insert(0, str(AUTOBUILD_DIR))
+AUTOHANDS_DIR = PROJECT_ROOT / "autohands"
+sys.path.insert(0, str(AUTOHANDS_DIR))
 
 from env_config import args_for_script  # noqa: E402
 

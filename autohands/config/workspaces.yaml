@@ -3,7 +3,7 @@
 # Repo IDENTITY must match PyAutoMind/repos.yaml (the body map);
 # repos_sync.py --check flags drift. An adopter replaces this file.
 #
-# run_all: short key -> {repo, report}: `autobuild run_all <key>` runs
+# run_all: short key -> {repo, report}: `autohands run_all <key>` runs
 # <repo>'s scripts and writes reports under <report>.
 run_all:
   autofit: {repo: autofit_workspace, report: autofit}

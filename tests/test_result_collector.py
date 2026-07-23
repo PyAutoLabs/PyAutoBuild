@@ -3,8 +3,8 @@ import sys
 import os
 from pathlib import Path
 
-# Add autobuild to path so we can import result_collector
-sys.path.insert(0, str(Path(__file__).parent.parent / "autobuild"))
+# Add autohands to path so we can import result_collector
+sys.path.insert(0, str(Path(__file__).parent.parent / "autohands"))
 
 from result_collector import Status, ScriptResult, RunReport, parse_no_run_reasons
 
@@ -98,7 +98,7 @@ def test_run_report_write(tmp_path):
 
 
 def test_parse_no_run_reasons():
-    config_path = Path(__file__).parent.parent / "autobuild" / "config" / "no_run.yaml"
+    config_path = Path(__file__).parent.parent / "autohands" / "config" / "no_run.yaml"
     if not config_path.exists():
         return  # Skip if config not available
 
@@ -112,7 +112,7 @@ def test_parse_no_run_reasons():
 
 
 def test_parse_no_run_reasons_empty_project():
-    config_path = Path(__file__).parent.parent / "autobuild" / "config" / "no_run.yaml"
+    config_path = Path(__file__).parent.parent / "autohands" / "config" / "no_run.yaml"
     if not config_path.exists():
         return
 

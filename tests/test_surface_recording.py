@@ -12,7 +12,7 @@ import json
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "autobuild"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "autohands"))
 from aggregate_results import aggregate  # noqa: E402
 
 

@@ -1,21 +1,15 @@
+#!/usr/bin/env python
+
 import sys
 import yaml
+from argparse import ArgumentParser
 from pathlib import Path
 
 import build_util
 
-from argparse import ArgumentParser
-
-
 parser = ArgumentParser()
-
-parser.add_argument("project", type=str, help="The project to build")
-parser.add_argument("directory", type=str, help="The directory to build")
-parser.add_argument(
-    "--visualise",
-    action="store_true",
-    help="Only run notebooks for which we want to create visualisations",
-)
+parser.add_argument("project", type=str, help="The project to run scripts for")
+parser.add_argument("directory", type=str, help="The directory containing scripts")
 parser.add_argument(
     "--report-dir",
     type=str,
@@ -33,40 +27,23 @@ args = parser.parse_args()
 
 project = args.project
 directory = args.directory
-visualise = args.visualise
 
+AUTOHANDS_CONFIG = Path(__file__).parent / "config"
 WORKSPACE_BUILD_CONFIG = Path.cwd() / "config" / "build"
 
-# Each workspace owns its build config in config/build/. There is no
-# autobuild-level fallback: the keyed-dict fallbacks were removed once every
-# build target owned its own files, so a missing config is a workspace bug and
-# is reported as one rather than silently resolving to someone else's rules.
+# no_run.yaml: prefer workspace config/build/, fall back to autohands config
 no_run_path = WORKSPACE_BUILD_CONFIG / "no_run.yaml"
 if not no_run_path.exists():
-    raise FileNotFoundError(
-        f"{no_run_path} not found. Every workspace must own its "
-        f"config/build/no_run.yaml (an empty file is valid and skips nothing). "
-        f"Run from the workspace root, not from PyAutoHands."
-    )
+    no_run_path = AUTOHANDS_CONFIG / "no_run.yaml"
 
 with open(no_run_path) as f:
-    no_run_list = yaml.safe_load(f) or []
+    no_run_data = yaml.safe_load(f)
 
-if visualise:
-    # A workspace with no visualise_notebooks.yaml has nothing marked for
-    # visualisation; that is not an error, it just selects nothing.
-    workspace_visualise = WORKSPACE_BUILD_CONFIG / "visualise_notebooks.yaml"
-    if workspace_visualise.exists():
-        with open(workspace_visualise) as f:
-            visualise_dict = yaml.safe_load(f) or []
-    else:
-        print(
-            f"--visualise: no {workspace_visualise} in this workspace; "
-            f"no notebooks are marked for visualisation."
-        )
-        visualise_dict = []
+# Support both flat list (workspace) and keyed dict (legacy autohands)
+if isinstance(no_run_data, dict):
+    no_run_list = no_run_data[project]
 else:
-    visualise_dict = None
+    no_run_list = no_run_data or []
 
 # env_vars.yaml: explicit flag > workspace config/build/ > none
 env_config_path = None
@@ -85,7 +62,8 @@ if __name__ == "__main__":
         report = RunReport(
             project=project,
             directory=directory,
-            run_type="notebook",
+            run_type="script",
+            env_profile=(env_config_path.name if env_config_path else "none"),
         )
         skip_reasons = parse_no_run_reasons(no_run_path, project)
 
@@ -94,9 +72,8 @@ if __name__ == "__main__":
         from env_config import load_env_config
         env_config = load_env_config(env_config_path)
 
-    build_util.execute_notebooks_in_folder(
+    build_util.execute_scripts_in_folder(
         no_run_list=no_run_list,
-        visualise_dict=visualise_dict,
         directory=directory,
         report=report,
         skip_reasons=skip_reasons,

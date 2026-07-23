@@ -8,7 +8,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "autobuild"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "autohands"))
 from validate_env_profiles import (  # noqa: E402
     is_jax_marked,
     resolve_clean,

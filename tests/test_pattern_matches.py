@@ -1,4 +1,4 @@
-"""Regression tests for the path-pattern matchers in autobuild.
+"""Regression tests for the path-pattern matchers in autohands.
 
 Both ``env_config._pattern_matches`` and ``build_util.should_skip`` substring-
 match against the file's full path including extension. Patterns can therefore
@@ -10,8 +10,8 @@ silently disabled overrides ending in ``.py``.
 
 from pathlib import Path
 
-from autobuild.build_util import should_skip
-from autobuild.env_config import _pattern_matches
+from autohands.build_util import should_skip
+from autohands.env_config import _pattern_matches
 
 
 def test_dot_py_pattern_matches_only_the_py_script():
