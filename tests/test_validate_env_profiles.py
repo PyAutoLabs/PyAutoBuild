@@ -180,3 +180,100 @@ def test_init_py_is_not_a_script(tmp_path):
     ws = _workspace(tmp_path, GOOD_SMOKE, release, ["jax_assertions/__init__.py"])
     errors, warnings = validate_workspace(ws, strict_markers=True)
     assert errors == [] and warnings == []
+
+
+# --- In-file declarations (docs/env_profile_redesign.md §10) ------------------
+
+
+def _write(ws: Path, rel: str, body: str) -> None:
+    p = ws / "scripts" / rel
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(body)
+
+
+def test_unknown_declaration_token_is_an_error(tmp_path):
+    ws = _workspace(tmp_path, GOOD_SMOKE, GOOD_RELEASE, ["imaging/run.py"])
+    _write(ws, "imaging/run.py", "# ENV: jax bogus\ncode\n")
+    errors, _ = validate_workspace(ws)
+    assert any("unknown env declaration token 'bogus'" in e for e in errors)
+
+
+def test_duplicate_declaration_line_is_an_error(tmp_path):
+    ws = _workspace(tmp_path, GOOD_SMOKE, GOOD_RELEASE, ["imaging/run.py"])
+    _write(ws, "imaging/run.py", "# ENV: jax\ncode\n# ENV: real_plots\n")
+    errors, _ = validate_workspace(ws)
+    assert any("more than one '# ENV:'" in e for e in errors)
+
+
+def test_valid_declaration_passes_and_round_trips(tmp_path):
+    # A script declaring full_datasets against a profile that pins
+    # SMALL_DATASETS=1: valid syntax, and the round-trip check confirms the
+    # resolved env drops the var.
+    smoke = 'defaults: {PYAUTO_TEST_MODE: "2", PYAUTO_SMALL_DATASETS: "1"}\noverrides: []\n'
+    ws = _workspace(tmp_path, smoke, GOOD_RELEASE, ["imaging/run.py"])
+    _write(ws, "imaging/run.py", "# ENV: full_datasets\ncode\n")
+    errors, warnings = validate_workspace(ws)
+    assert errors == [] and warnings == []
+    assert "PYAUTO_SMALL_DATASETS" not in resolve_clean(
+        ws / "scripts" / "imaging" / "run.py",
+        {"defaults": {"PYAUTO_SMALL_DATASETS": "1"}},
+    )
+
+
+def test_strict_declarations_flags_pure_declarable_unset(tmp_path):
+    # An override that only unsets declarable vars (no set:) is migratable.
+    smoke = (
+        'defaults: {PYAUTO_TEST_MODE: "2"}\n'
+        "overrides:\n  - pattern: 'guides/'\n    unset: [PYAUTO_TEST_MODE]\n"
+    )
+    ws = _workspace(tmp_path, smoke, GOOD_RELEASE, ["guides/run.py"])
+    errors, _ = validate_workspace(ws)  # default off
+    assert not any("--strict-declarations" in e for e in errors)
+    errors, _ = validate_workspace(ws, strict_declarations=True)
+    assert any("--strict-declarations" in e for e in errors)
+
+
+def test_strict_declarations_skips_jax_unset_on_unmarked_scripts(tmp_path):
+    # An override unsetting PYAUTO_DISABLE_JAX that matches a NON-jax-marked
+    # script is not migratable: a profile-agnostic `jax` declaration would flip
+    # release "1" -> absent (numpy -> JAX) on that script — outside the
+    # verified "0" -> absent equivalence class. Must NOT be flagged.
+    smoke = (
+        'defaults: {PYAUTO_DISABLE_JAX: "1"}\n'
+        "overrides:\n"
+        "  - pattern: 'database/scrape/'\n    unset: [PYAUTO_DISABLE_JAX]\n"
+    )
+    ws = _workspace(
+        tmp_path,
+        smoke,
+        GOOD_RELEASE,
+        ["database/scrape/general.py", "database/scrape/slam_general_jax.py"],
+    )
+    errors, _ = validate_workspace(ws, strict_declarations=True)
+    assert not any("--strict-declarations" in e for e in errors)
+
+    # Same override shape matching ONLY jax-marked scripts stays flagged.
+    smoke_marked = (
+        'defaults: {PYAUTO_DISABLE_JAX: "1"}\n'
+        "overrides:\n"
+        "  - pattern: 'jax_grad/'\n    unset: [PYAUTO_DISABLE_JAX]\n"
+    )
+    ws2 = _workspace(
+        tmp_path / "marked", smoke_marked, GOOD_RELEASE, ["jax_grad/imaging.py"]
+    )
+    errors2, _ = validate_workspace(ws2, strict_declarations=True)
+    assert any("--strict-declarations" in e for e in errors2)
+
+
+def test_strict_declarations_ignores_mixed_and_set_overrides(tmp_path):
+    # unset includes a NON-declarable var -> not fully migratable -> not flagged.
+    # a set: clause -> not a pure unset -> not flagged.
+    smoke = (
+        'defaults: {PYAUTO_TEST_MODE: "2"}\n'
+        "overrides:\n"
+        "  - pattern: 'guides/'\n    unset: [PYAUTO_TEST_MODE, PYAUTO_SKIP_FIT_OUTPUT]\n"
+        "  - pattern: 'imaging/'\n    set: {PYAUTO_TEST_MODE: '1'}\n"
+    )
+    ws = _workspace(tmp_path, smoke, GOOD_RELEASE, ["guides/run.py", "imaging/run.py"])
+    errors, _ = validate_workspace(ws, strict_declarations=True)
+    assert not any("--strict-declarations" in e for e in errors)

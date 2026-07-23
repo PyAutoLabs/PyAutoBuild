@@ -176,6 +176,82 @@ file in `config/build/` is now a validator error so the old names cannot creep b
   profiles (outside the three _test repos) adopt the same shape in the same
   pass or lag one release.
 
+## 10. In-file env declarations (#187, Stage 1 — mechanism)
+
+Pattern-keyed profile overrides are the seed incident's failure mode 3: a
+per-pattern rule lives far from the script it governs, drifts silently, and can
+be silently defeated by a later, broader pattern. The end state is that a script
+declares its own env intent **in-file**, and the pattern overrides that only
+express that intent are deleted. Stage 1 lands the mechanism; the workspace
+migrations follow in later PRs.
+
+**Syntax.** A single anchored comment line, `# ENV:` at column 0 followed by
+whitespace-separated tokens:
+
+```python
+# ENV: jax full_datasets
+```
+
+At most one `# ENV:` line per file (more is a validator/resolver error). An
+unknown token is an error. The line is matched anchored — an indented or
+trailing `# ENV:` is prose, not a declaration. The parser is
+`autohands/env_config.read_env_declaration(path) -> list[str] | None`.
+
+**Token table.** Each token UNSETS the managed var(s) it names:
+
+| Token | Unsets |
+|-------|--------|
+| `jax` | `PYAUTO_DISABLE_JAX` |
+| `full_datasets` | `PYAUTO_SMALL_DATASETS` |
+| `real_plots` | `PYAUTO_FAST_PLOTS` |
+| `real_search` | `PYAUTO_TEST_MODE` |
+| `real_output` | all four of the above |
+
+**Unset semantics, and why.** A token *releases* its var — it removes the var
+from the resolved env so the reader falls back to the **library default**. For
+all four vars that default is the well-defined "absent == off == `0`" state,
+verified against the reader code (2026-07-23):
+
+| Var | Reader (file:line) | absent | `"0"` | `"1"` |
+|-----|--------------------|--------|-------|-------|
+| `PYAUTO_TEST_MODE` | PyAutoNerves `autonerves/test_mode.py:14` (`int(get("...","0"))`) | level 0 (off) | 0 (off) | level 1 |
+| `PYAUTO_DISABLE_JAX` | PyAutoFit `autofit/non_linear/analysis/analysis.py:68` (`get(...) == "1"`) | not disabled | not disabled | disabled |
+| `PYAUTO_SMALL_DATASETS` | PyAutoArray `autoarray/mask/mask_2d.py:363` et al. (`get(...) == "1"`) | full | full | small |
+| `PYAUTO_FAST_PLOTS` | PyAutoArray `autoarray/plot/utils.py:15` et al. (`get(...) == "1"`) | real | real | fast |
+
+Because absent behaves identically to `"0"`, unsetting is exactly what today's
+profile `unset:` lists do — which is what makes the later
+profile→declaration migration a **provable no-op**: the resolved-env diff over
+every script is empty before and after. That empty-diff is the migration's gate,
+the mechanical form of §8 steps 3–4.
+
+**Precedence (last wins):** scrub → defaults → overrides → derivation →
+**declarations**. Declarations are applied LAST, in `apply_profile`, so no
+profile pattern — however broad — can silently defeat a script's declared
+intent.
+
+**Path resolution.** `apply_profile(env, file, env_config)` keeps its fixed
+positional signature (the ~10 vendored `run_smoke.py` copies and the mega-run
+runners must not change). The declared source is found by candidate resolution
+(first existing wins): `Path(file)` as given (absolute mega-run script path);
+`scripts/`-relative to cwd (the per-PR gate's `imaging/x.py`); and the
+`notebooks/`→`scripts/` mirror (the mega-run notebook runner's absolute
+`notebooks/…` path). A `.ipynb` entry maps to its `.py` source first. No
+on-disk candidate → no declaration; the validator, which walks the real
+`scripts/` tree, is the drift catcher.
+
+**Validator additions** (`autohands/validate_env_profiles.py`): declaration
+syntax errors (unknown token, duplicate line); a round-trip check (a declared
+script's resolved env must not carry a var it unsets — else resolver bug); and
+`--strict-declarations` (default OFF, CI on post-migration) which errors on any
+override whose whole effect is an unset of only the four declarable vars with no
+`set:` clause — that override should be an in-file declaration instead.
+
+**Triage rule (verbatim).** An env fix must be justified by the script's
+declared intent, never by making a failure disappear — at least three July 2026
+failures first mis-diagnosed as env gaps were real library bugs
+(PyAutoArray#398, PyAutoFit#1415, PyAutoGalaxy#515).
+
 ## Trust nothing here
 
 Same authorship as the campaign's other documents, same instruction: the map

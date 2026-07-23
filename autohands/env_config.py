@@ -5,6 +5,7 @@ applying defaults and per-pattern overrides.
 """
 
 import os
+import re
 import shlex
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -26,6 +27,124 @@ import yaml
 # them would risk breaking the least-exercised, highest-consequence release
 # path on a single missed key. The audit's actual leak is the PYAUTO_ family.
 MANAGED_ENV_PREFIXES = ("PYAUTO_",)
+
+
+# --- In-file env declarations (docs/env_profile_redesign.md §10) --------------
+#
+# A script declares the workspace-behaviour vars it wants RELEASED (unset) via a
+# single anchored `# ENV: <tokens>` comment line. Each token unsets its managed
+# var(s) AFTER the profile's defaults/overrides/derivation are applied, so the
+# var falls back to the library default — which for all four vars is the "absent
+# == off == '0'" state (verified against the reader code, docs §10). This is
+# exactly the semantics of today's profile `unset:` lists, which is what makes
+# the later profile->declaration migration a provable no-op (empty resolved-env
+# diff). The token map (a token may release more than one var):
+ENV_DECLARATION_TOKENS: Dict[str, tuple] = {
+    "jax": ("PYAUTO_DISABLE_JAX",),
+    "full_datasets": ("PYAUTO_SMALL_DATASETS",),
+    "real_plots": ("PYAUTO_FAST_PLOTS",),
+    "real_search": ("PYAUTO_TEST_MODE",),
+    "real_output": (
+        "PYAUTO_DISABLE_JAX",
+        "PYAUTO_SMALL_DATASETS",
+        "PYAUTO_FAST_PLOTS",
+        "PYAUTO_TEST_MODE",
+    ),
+}
+
+# The four vars a declaration can release — the union of every token's targets.
+# Used by the validator's --strict-declarations gate to decide whether a profile
+# override's effect is fully expressible as an in-file declaration.
+DECLARABLE_ENV_VARS = frozenset(
+    var for vars_ in ENV_DECLARATION_TOKENS.values() for var in vars_
+)
+
+# The declaration line: `# ENV:` anchored at column 0, then whitespace-separated
+# tokens. At most one such line per file (more is a validator/resolver error).
+_ENV_DECLARATION_RE = re.compile(r"^# ENV:(?P<tokens>.*)$")
+
+
+def read_env_declaration(path) -> Optional[List[str]]:
+    """Return the declared env tokens for a script, or None if it declares none.
+
+    Scans the whole file line-by-line (scripts are small) for the single
+    anchored ``# ENV: <tokens>`` line. Returns the list of token strings (each a
+    key of ``ENV_DECLARATION_TOKENS``); an empty ``# ENV:`` line returns ``[]``.
+
+    Raises
+    ------
+    ValueError
+        If the file carries more than one ``# ENV:`` line, or a token is not in
+        ``ENV_DECLARATION_TOKENS`` — loud beats silent, in both the resolver and
+        the validator (which catches and reports it as a config error).
+    """
+    path = Path(path)
+    tokens: Optional[List[str]] = None
+    for line in path.read_text().splitlines():
+        m = _ENV_DECLARATION_RE.match(line)
+        if m is None:
+            continue
+        if tokens is not None:
+            raise ValueError(
+                f"{path}: more than one '# ENV:' declaration line "
+                "(at most one is allowed)"
+            )
+        tokens = m.group("tokens").split()
+        for token in tokens:
+            if token not in ENV_DECLARATION_TOKENS:
+                raise ValueError(
+                    f"{path}: unknown env declaration token '{token}' "
+                    f"(allowed: {', '.join(sorted(ENV_DECLARATION_TOKENS))})"
+                )
+    return tokens
+
+
+def _declaration_source_path(file: Path) -> Optional[Path]:
+    """Resolve the on-disk source file whose ``# ENV:`` line governs ``file``.
+
+    The ``file`` argument reaches us in different forms from different callers
+    (all keeping the fixed positional signature — no vendored copy is edited):
+
+    * per-PR gate (``run_smoke.py``): a path RELATIVE to ``scripts/``, e.g.
+      ``imaging/model_fit.py`` (or ``imaging/model_fit.ipynb`` for a notebook),
+      with cwd = workspace root;
+    * mega-run script runner (``build_util.execute_scripts_in_folder`` via
+      ``run_python.py``): an ABSOLUTE path under ``scripts/``;
+    * mega-run notebook runner (``build_util.execute_notebooks_in_folder`` via
+      ``run.py``): an ABSOLUTE path under ``notebooks/``.
+
+    A ``.ipynb`` entry is first mapped to its ``.py`` source — notebooks are
+    generated from scripts and the declaration lives in the script.
+
+    Candidate order (first existing wins):
+      1. ``Path(file)`` as given — the absolute script path from the mega-run
+         script runner, or any scripts/-prefixed path;
+      2. ``Path("scripts") / file`` relative to cwd — the per-PR gate's
+         scripts-relative path;
+      3. the ``notebooks/`` -> ``scripts/`` mirror path — the mega-run notebook
+         runner's absolute path under ``notebooks/`` maps to the source script
+         under ``scripts/``.
+
+    Returns None when no candidate exists on disk (no declaration). The
+    validator, which walks the real ``scripts/`` tree, is the drift catcher —
+    the resolver stays silent so a moved/absent file never crashes a run.
+    """
+    src = Path(file)
+    if src.suffix == ".ipynb":
+        src = src.with_suffix(".py")
+
+    candidates = [src, Path("scripts") / src]
+
+    parts = src.parts
+    if "notebooks" in parts:
+        # Swap the LAST 'notebooks' segment for 'scripts' (mirror layout).
+        idx = len(parts) - 1 - parts[::-1].index("notebooks")
+        candidates.append(Path(*parts[:idx], "scripts", *parts[idx + 1 :]))
+
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    return None
 
 
 # The per-script env profile filename for each kind. The legacy env_vars*.yaml
@@ -99,11 +218,16 @@ def apply_profile(
     env_config: dict,
 ) -> Dict[str, str]:
     """Apply a profile to a base env dict: defaults, then overrides in order,
-    then the JAX-marker derivation (when the profile opts in).
+    then the JAX-marker derivation (when the profile opts in), then the script's
+    own in-file ``# ENV:`` declaration.
 
     The single resolution path shared by the runner (``build_env_for_script``,
     base = scrubbed ambient env) and the validator (``resolve_clean``, base =
     empty dict) — docs/env_profile_redesign.md §5. Mutates and returns ``env``.
+
+    Precedence (last wins): scrub -> defaults -> overrides -> derivation ->
+    declarations. Declarations are applied LAST so no profile pattern can
+    silently defeat a script's declared intent (docs §10).
     """
     for key, value in (env_config.get("defaults") or {}).items():
         env[key] = str(value)
@@ -124,6 +248,16 @@ def apply_profile(
     # so a profile override cannot (and must not) carve exceptions out of it.
     if env_config.get("derive_jax_markers") and is_jax_marked(file):
         env["PYAUTO_DISABLE_JAX"] = "0"
+
+    # In-file declaration (docs/env_profile_redesign.md §10), applied LAST. Each
+    # token UNSETS its managed var(s), so the var falls back to the library
+    # default (== absent == "0"/off). read_env_declaration RAISES on an unknown
+    # token or a duplicate line — loud beats silent in the resolver too.
+    source = _declaration_source_path(file)
+    if source is not None:
+        for token in read_env_declaration(source) or []:
+            for var in ENV_DECLARATION_TOKENS[token]:
+                env.pop(var, None)
 
     return env
 

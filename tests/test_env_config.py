@@ -141,3 +141,146 @@ def test_is_jax_marked_mid_stem_marker_does_not_match():
     assert is_jax_marked(
         Path("scripts/imaging/modeling_visualization_delaunay_jit.py")
     )
+
+
+# --- In-file env declarations (docs/env_profile_redesign.md §10) --------------
+import pytest  # noqa: E402
+from env_config import (  # noqa: E402
+    ENV_DECLARATION_TOKENS,
+    apply_profile,
+    read_env_declaration,
+)
+
+
+def _write_script(tmp_path, rel, body):
+    p = tmp_path / "scripts" / rel
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(body)
+    return p
+
+
+def test_read_declaration_none_when_absent(tmp_path):
+    p = _write_script(tmp_path, "imaging/x.py", "import autolens as al\n")
+    assert read_env_declaration(p) is None
+
+
+def test_read_declaration_tokens(tmp_path):
+    p = _write_script(tmp_path, "imaging/x.py", "# ENV: jax full_datasets\nimport al\n")
+    assert read_env_declaration(p) == ["jax", "full_datasets"]
+
+
+def test_read_declaration_empty_line_is_no_tokens(tmp_path):
+    p = _write_script(tmp_path, "imaging/x.py", "# ENV:\nimport al\n")
+    assert read_env_declaration(p) == []
+
+
+def test_read_declaration_unknown_token_raises(tmp_path):
+    p = _write_script(tmp_path, "imaging/x.py", "# ENV: jax nonsense\n")
+    with pytest.raises(ValueError, match="unknown env declaration token 'nonsense'"):
+        read_env_declaration(p)
+
+
+def test_read_declaration_duplicate_line_raises(tmp_path):
+    p = _write_script(tmp_path, "imaging/x.py", "# ENV: jax\ncode\n# ENV: real_plots\n")
+    with pytest.raises(ValueError, match="more than one '# ENV:'"):
+        read_env_declaration(p)
+
+
+def test_read_declaration_anchored_not_mid_line(tmp_path):
+    # A '# ENV:' that is not at column 0 (indented / trailing comment) is prose.
+    p = _write_script(tmp_path, "imaging/x.py", "code  # ENV: jax\n    # ENV: jax\n")
+    assert read_env_declaration(p) is None
+
+
+def test_real_output_expands_to_all_four(tmp_path):
+    assert set(ENV_DECLARATION_TOKENS["real_output"]) == {
+        "PYAUTO_DISABLE_JAX",
+        "PYAUTO_SMALL_DATASETS",
+        "PYAUTO_FAST_PLOTS",
+        "PYAUTO_TEST_MODE",
+    }
+    _write_script(tmp_path, "imaging/x.py", "# ENV: real_output\n")
+    cfg = {
+        "defaults": {
+            "PYAUTO_DISABLE_JAX": "1",
+            "PYAUTO_SMALL_DATASETS": "1",
+            "PYAUTO_FAST_PLOTS": "1",
+            "PYAUTO_TEST_MODE": "2",
+            "PYAUTO_SKIP_CHECKS": "1",  # not declarable — survives
+        }
+    }
+    env = apply_profile({}, tmp_path / "scripts" / "imaging" / "x.py", cfg)
+    for var in ENV_DECLARATION_TOKENS["real_output"]:
+        assert var not in env
+    assert env["PYAUTO_SKIP_CHECKS"] == "1"
+
+
+def test_declaration_unsets_after_default(tmp_path):
+    # A profile that pins SMALL_DATASETS=1 + a script declaring full_datasets:
+    # the resolved env must LACK the var (falls back to the library default).
+    _write_script(tmp_path, "imaging/x.py", "# ENV: full_datasets\ncode\n")
+    cfg = {"defaults": {"PYAUTO_SMALL_DATASETS": "1"}}
+    env = apply_profile({}, tmp_path / "scripts" / "imaging" / "x.py", cfg)
+    assert "PYAUTO_SMALL_DATASETS" not in env
+
+
+def test_declaration_unsets_after_override(tmp_path):
+    # Declarations apply LAST — after an override that sets the var.
+    _write_script(tmp_path, "imaging/x.py", "# ENV: jax\ncode\n")
+    cfg = {
+        "defaults": {},
+        "overrides": [{"pattern": "imaging/", "set": {"PYAUTO_DISABLE_JAX": "1"}}],
+    }
+    env = apply_profile({}, tmp_path / "scripts" / "imaging" / "x.py", cfg)
+    assert "PYAUTO_DISABLE_JAX" not in env
+
+
+def test_declaration_resolves_via_scripts_relative_path(tmp_path, monkeypatch):
+    # The per-PR gate passes a path relative to scripts/, with cwd = repo root.
+    _write_script(tmp_path, "imaging/x.py", "# ENV: real_search\ncode\n")
+    monkeypatch.chdir(tmp_path)
+    cfg = {"defaults": {"PYAUTO_TEST_MODE": "2"}}
+    env = apply_profile({}, Path("imaging/x.py"), cfg)
+    assert "PYAUTO_TEST_MODE" not in env
+
+
+def test_notebook_entry_maps_to_source_script(tmp_path, monkeypatch):
+    # A .ipynb entry resolves the declaration from its .py source under scripts/.
+    _write_script(tmp_path, "imaging/x.py", "# ENV: real_plots\ncode\n")
+    monkeypatch.chdir(tmp_path)
+    cfg = {"defaults": {"PYAUTO_FAST_PLOTS": "1"}}
+    env = apply_profile({}, Path("imaging/x.ipynb"), cfg)
+    assert "PYAUTO_FAST_PLOTS" not in env
+
+
+def test_notebook_absolute_path_maps_notebooks_to_scripts(tmp_path):
+    # The mega-run notebook runner passes an absolute path under notebooks/.
+    _write_script(tmp_path, "imaging/x.py", "# ENV: real_plots\ncode\n")
+    nb = tmp_path / "notebooks" / "imaging" / "x.ipynb"
+    nb.parent.mkdir(parents=True, exist_ok=True)
+    nb.write_text("{}")
+    cfg = {"defaults": {"PYAUTO_FAST_PLOTS": "1"}}
+    env = apply_profile({}, nb, cfg)
+    assert "PYAUTO_FAST_PLOTS" not in env
+
+
+def test_declaration_absolute_script_path(tmp_path):
+    # The mega-run script runner passes an absolute path under scripts/.
+    p = _write_script(tmp_path, "imaging/x.py", "# ENV: jax\ncode\n")
+    cfg = {"defaults": {"PYAUTO_DISABLE_JAX": "1"}}
+    env = apply_profile({}, p, cfg)
+    assert "PYAUTO_DISABLE_JAX" not in env
+
+
+def test_no_declaration_leaves_env_untouched(tmp_path, monkeypatch):
+    _write_script(tmp_path, "imaging/x.py", "code only\n")
+    monkeypatch.chdir(tmp_path)
+    cfg = {"defaults": {"PYAUTO_TEST_MODE": "2"}}
+    env = apply_profile({}, Path("imaging/x.py"), cfg)
+    assert env["PYAUTO_TEST_MODE"] == "2"
+
+
+def test_unknown_token_raises_in_resolver(tmp_path):
+    p = _write_script(tmp_path, "imaging/x.py", "# ENV: bogus\n")
+    with pytest.raises(ValueError, match="unknown env declaration token"):
+        apply_profile({}, p, {"defaults": {}})
