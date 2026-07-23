@@ -59,43 +59,128 @@ DECLARABLE_ENV_VARS = frozenset(
     var for vars_ in ENV_DECLARATION_TOKENS.values() for var in vars_
 )
 
-# The declaration line: `# ENV:` anchored at column 0, then whitespace-separated
-# tokens. At most one such line per file (more is a validator/resolver error).
+# A declaration takes one of TWO on-disk forms (docs/env_profile_redesign.md §10):
+#
+#   Comment form (``_test`` repos, code-heavy / doc-light):
+#       # ENV: jax full_datasets
+#   A single ``# ENV:`` comment anchored at column 0, then whitespace-separated
+#   tokens.
+#
+#   Docstring form (user-facing workspaces — kept out of teaching prose and
+#   stripped from generated notebooks/markdown):
+#       """
+#       __Env__ (Developer Only)
+#       ...
+#       ENV: full_datasets
+#       """
+#   A bottom-of-file docstring block whose first non-blank line is ``__Env__``
+#   (a trailing parenthetical such as ``(Developer Only)`` is allowed),
+#   containing exactly one ``ENV: <tokens>`` line (no leading ``#``).
+#
+# A file may carry EITHER one comment OR one ``__Env__`` section — never both,
+# and never two of either. The parser stays deliberately line-based (no ``ast``),
+# consistent with the rest of this module.
 _ENV_DECLARATION_RE = re.compile(r"^# ENV:(?P<tokens>.*)$")
+# A bare triple-quote delimiter alone on its line (opens/closes a docstring).
+_DOCSTRING_DELIM_RE = re.compile(r"^(?:\"\"\"|''')\s*$")
+# The ``__Env__`` docstring header — the section marker, optional trailing text
+# (e.g. a ``(Developer Only)`` note).
+_ENV_SECTION_HEADER_RE = re.compile(r"^__Env__\b")
+# The declaration line INSIDE an ``__Env__`` section: ``ENV: <tokens>`` (no #).
+_ENV_SECTION_LINE_RE = re.compile(r"^ENV:\s+(?P<tokens>.*)$")
+
+_DUPLICATE_DECLARATION_MSG = (
+    "more than one env declaration (at most one '# ENV:' comment line "
+    "or one '__Env__' docstring section is allowed)"
+)
+
+
+def _validate_tokens(path: Path, tokens: List[str]) -> None:
+    """Raise if any token is not a key of ``ENV_DECLARATION_TOKENS``."""
+    for token in tokens:
+        if token not in ENV_DECLARATION_TOKENS:
+            raise ValueError(
+                f"{path}: unknown env declaration token '{token}' "
+                f"(allowed: {', '.join(sorted(ENV_DECLARATION_TOKENS))})"
+            )
 
 
 def read_env_declaration(path) -> Optional[List[str]]:
     """Return the declared env tokens for a script, or None if it declares none.
 
     Scans the whole file line-by-line (scripts are small) for the single
-    anchored ``# ENV: <tokens>`` line. Returns the list of token strings (each a
-    key of ``ENV_DECLARATION_TOKENS``); an empty ``# ENV:`` line returns ``[]``.
+    declaration — in EITHER the ``# ENV: <tokens>`` comment form or the
+    bottom-of-file ``__Env__`` docstring-section form (docs/env_profile_redesign.md
+    §10). Returns the list of token strings (each a key of
+    ``ENV_DECLARATION_TOKENS``); an empty comment ``# ENV:`` line returns ``[]``.
 
     Raises
     ------
     ValueError
-        If the file carries more than one ``# ENV:`` line, or a token is not in
-        ``ENV_DECLARATION_TOKENS`` — loud beats silent, in both the resolver and
-        the validator (which catches and reports it as a config error).
+        If the file carries more than one declaration in any mix of the two
+        forms, if an ``__Env__`` section has no (or more than one) ``ENV:`` line,
+        or if a token is not in ``ENV_DECLARATION_TOKENS`` — loud beats silent,
+        in both the resolver and the validator (which catches and reports it as
+        a config error).
     """
     path = Path(path)
     tokens: Optional[List[str]] = None
-    for line in path.read_text().splitlines():
+    lines = path.read_text().splitlines()
+    i = 0
+    n = len(lines)
+    while i < n:
+        line = lines[i]
+
+        # Comment form: `# ENV:` anchored at column 0.
         m = _ENV_DECLARATION_RE.match(line)
-        if m is None:
+        if m is not None:
+            if tokens is not None:
+                raise ValueError(f"{path}: {_DUPLICATE_DECLARATION_MSG}")
+            tokens = m.group("tokens").split()
+            _validate_tokens(path, tokens)
+            i += 1
             continue
-        if tokens is not None:
-            raise ValueError(
-                f"{path}: more than one '# ENV:' declaration line "
-                "(at most one is allowed)"
-            )
-        tokens = m.group("tokens").split()
-        for token in tokens:
-            if token not in ENV_DECLARATION_TOKENS:
-                raise ValueError(
-                    f"{path}: unknown env declaration token '{token}' "
-                    f"(allowed: {', '.join(sorted(ENV_DECLARATION_TOKENS))})"
-                )
+
+        # Docstring form: a bare `"""`/`'''` opener whose first non-blank inner
+        # line is the `__Env__` header.
+        if _DOCSTRING_DELIM_RE.match(line):
+            delim = line.strip()
+            j = i + 1
+            while j < n and lines[j].strip() == "":
+                j += 1
+            if j < n and _ENV_SECTION_HEADER_RE.match(lines[j].strip()):
+                # Walk to the closing delimiter, collecting the ENV: line(s).
+                k = j
+                section_tokens: Optional[List[str]] = None
+                closing = None
+                while k < n:
+                    if _DOCSTRING_DELIM_RE.match(lines[k]) and k != i:
+                        closing = k
+                        break
+                    em = _ENV_SECTION_LINE_RE.match(lines[k].strip())
+                    if em is not None:
+                        if section_tokens is not None:
+                            raise ValueError(
+                                f"{path}: more than one 'ENV:' line inside the "
+                                "'__Env__' docstring section (exactly one is "
+                                "allowed)"
+                            )
+                        section_tokens = em.group("tokens").split()
+                    k += 1
+                if section_tokens is None:
+                    raise ValueError(
+                        f"{path}: '__Env__' docstring section has no 'ENV:' line "
+                        "(it must contain exactly one)"
+                    )
+                if tokens is not None:
+                    raise ValueError(f"{path}: {_DUPLICATE_DECLARATION_MSG}")
+                tokens = section_tokens
+                _validate_tokens(path, tokens)
+                i = (closing + 1) if closing is not None else n
+                continue
+
+        i += 1
+
     return tokens
 
 

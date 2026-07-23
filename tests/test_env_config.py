@@ -182,8 +182,111 @@ def test_read_declaration_unknown_token_raises(tmp_path):
 
 def test_read_declaration_duplicate_line_raises(tmp_path):
     p = _write_script(tmp_path, "imaging/x.py", "# ENV: jax\ncode\n# ENV: real_plots\n")
-    with pytest.raises(ValueError, match="more than one '# ENV:'"):
+    with pytest.raises(ValueError, match="more than one env declaration"):
         read_env_declaration(p)
+
+
+# --- Docstring form: the canonical `__Env__` section (docs §10) ---------------
+
+_ENV_SECTION_BOTTOM = (
+    'import autolens as al\n'
+    'code()\n'
+    '\n'
+    '"""\n'
+    '__Env__ (Developer Only)\n'
+    '\n'
+    'Not user documentation: this section configures the test harness.\n'
+    '\n'
+    'ENV: full_datasets\n'
+    '"""\n'
+)
+
+_ENV_SECTION_TOP = (
+    '"""\n'
+    'Title\n'
+    '=====\n'
+    '"""\n'
+    '"""\n'
+    '__Env__\n'
+    '\n'
+    'Test-harness configuration.\n'
+    '\n'
+    'ENV: jax full_datasets\n'
+    '"""\n'
+    'import autolens as al\n'
+)
+
+
+def test_read_declaration_docstring_bottom_section(tmp_path):
+    p = _write_script(tmp_path, "imaging/x.py", _ENV_SECTION_BOTTOM)
+    assert read_env_declaration(p) == ["full_datasets"]
+
+
+def test_read_declaration_docstring_top_section(tmp_path):
+    # `_test`-repo placement: `__Env__` immediately after the module docstring.
+    p = _write_script(tmp_path, "imaging/x.py", _ENV_SECTION_TOP)
+    assert read_env_declaration(p) == ["jax", "full_datasets"]
+
+
+def test_read_declaration_docstring_plain_header_no_parenthetical(tmp_path):
+    body = '"""\n__Env__\n\nrationale.\n\nENV: real_output\n"""\n'
+    p = _write_script(tmp_path, "imaging/x.py", body)
+    assert read_env_declaration(p) == ["real_output"]
+
+
+def test_read_declaration_docstring_unknown_token_raises(tmp_path):
+    body = '"""\n__Env__\n\nENV: jax nonsense\n"""\n'
+    p = _write_script(tmp_path, "imaging/x.py", body)
+    with pytest.raises(ValueError, match="unknown env declaration token 'nonsense'"):
+        read_env_declaration(p)
+
+
+def test_read_declaration_docstring_missing_env_line_raises(tmp_path):
+    body = '"""\n__Env__\n\njust prose, no ENV line.\n"""\n'
+    p = _write_script(tmp_path, "imaging/x.py", body)
+    with pytest.raises(ValueError, match="no 'ENV:' line"):
+        read_env_declaration(p)
+
+
+def test_read_declaration_docstring_two_env_lines_raises(tmp_path):
+    body = '"""\n__Env__\n\nENV: jax\nENV: real_plots\n"""\n'
+    p = _write_script(tmp_path, "imaging/x.py", body)
+    with pytest.raises(ValueError, match="more than one 'ENV:' line"):
+        read_env_declaration(p)
+
+
+def test_read_declaration_mixed_forms_raises(tmp_path):
+    # A comment AND a docstring section = duplicate, in any mix.
+    body = '# ENV: jax\ncode\n"""\n__Env__\n\nENV: real_plots\n"""\n'
+    p = _write_script(tmp_path, "imaging/x.py", body)
+    with pytest.raises(ValueError, match="more than one env declaration"):
+        read_env_declaration(p)
+
+
+def test_read_declaration_two_docstring_sections_raises(tmp_path):
+    body = (
+        '"""\n__Env__\n\nENV: jax\n"""\n'
+        'code\n'
+        '"""\n__Env__\n\nENV: real_plots\n"""\n'
+    )
+    p = _write_script(tmp_path, "imaging/x.py", body)
+    with pytest.raises(ValueError, match="more than one env declaration"):
+        read_env_declaration(p)
+
+
+def test_docstring_section_resolves_in_apply_profile(tmp_path):
+    # End-to-end: a `__Env__` section releases its var just like the comment did.
+    p = _write_script(tmp_path, "imaging/x.py", _ENV_SECTION_BOTTOM)
+    cfg = {"defaults": {"PYAUTO_SMALL_DATASETS": "1"}}
+    env = apply_profile({}, p, cfg)
+    assert "PYAUTO_SMALL_DATASETS" not in env
+
+
+def test_non_env_docstring_section_is_not_a_declaration(tmp_path):
+    # A normal `__Contents__`-style section must not be read as a declaration.
+    body = '"""\n__Contents__\n\n- item\n"""\ncode\n'
+    p = _write_script(tmp_path, "imaging/x.py", body)
+    assert read_env_declaration(p) is None
 
 
 def test_read_declaration_anchored_not_mid_line(tmp_path):

@@ -185,16 +185,65 @@ declares its own env intent **in-file**, and the pattern overrides that only
 express that intent are deleted. Stage 1 lands the mechanism; the workspace
 migrations follow in later PRs.
 
-**Syntax.** A single anchored comment line, `# ENV:` at column 0 followed by
-whitespace-separated tokens:
+**Syntax — two forms, one canonical.** A script declares its env intent in a
+docstring section, the `__Env__` block, which is now **the canonical form in
+every repo** (user workspaces and `_test` repos alike). A legacy `# ENV:`
+comment form is still parsed and valid for the transition, but is **deprecated
+pending removal** — a later validator flip will error on it once every repo has
+migrated. Both forms carry the identical token vocabulary and resolve
+identically; a file may carry **exactly one** declaration in **either** form
+(any second declaration, in any mix, is a validator/resolver error).
+
+*Canonical `__Env__` docstring form.* A triple-quoted block whose first non-blank
+line is the `__Env__` header (a trailing parenthetical such as
+`(Developer Only)` is allowed), containing **exactly one** `ENV: <tokens>` line
+(no leading `#`):
+
+```python
+"""
+__Env__ (Developer Only)
+
+Not user documentation: this section configures the automated test harness.
+...
+
+ENV: jax full_datasets
+"""
+```
+
+**Placement conventions** (where the block lives depends on the repo's
+audience):
+
+| Repos | Placement | Header |
+|-------|-----------|--------|
+| User-facing workspaces (`autolens_workspace`, `autogalaxy_workspace`) **and the HowTo lectures** (`HowToFit`, `HowToGalaxy`, `HowToLens`) | **Very bottom** of the script | `__Env__ (Developer Only)` + the developer-only note |
+| `_test` repos (`autolens_workspace_test`, `autogalaxy_workspace_test`, `autofit_workspace_test`) | **Near top**, immediately after the module's opening docstring | `__Env__` + a short one-line note |
+
+- **User-facing workspaces and the HowTo lectures** are teaching material read
+  top-to-bottom as tutorial prose, so the harness config goes **last**, out of
+  the reader's way, and carries the developer-only note. It is **stripped from
+  generated notebooks and markdown** by
+  `add_notebook_quotes.strip_env_declarations`, applied in the shared
+  `build_util.py_to_notebook` path (used by BOTH `generate.py` notebook
+  generation and `generate_markdown.py`, for the workspaces and the HowTo repos
+  alike) and reused by `navigator.py` — so it never leaks into published docs or
+  the LLM catalogue, and a future HowTo declaration is stripped automatically.
+  (The HowTo repos currently carry **no** declarations — no declarable overrides
+  existed there at the #187 migration — but the rule is fixed for when one is
+  added.)
+- **`_test` repos** are code-heavy / doc-light and are **not** doc-generated, so
+  the block sits near the **top** where a developer reading the harness script
+  sees it immediately, with a short note (no "stripped from notebooks" claim,
+  which would not apply).
+
+*Legacy `# ENV:` comment form (deprecated).* A single comment line, `# ENV:` at
+column 0 followed by whitespace-separated tokens:
 
 ```python
 # ENV: jax full_datasets
 ```
 
-At most one `# ENV:` line per file (more is a validator/resolver error). An
-unknown token is an error. The line is matched anchored — an indented or
-trailing `# ENV:` is prose, not a declaration. The parser is
+An unknown token is an error. The comment is matched anchored — an indented or
+trailing `# ENV:` is prose, not a declaration. The parser for both forms is
 `autohands/env_config.read_env_declaration(path) -> list[str] | None`.
 
 **Token table.** Each token UNSETS the managed var(s) it names:

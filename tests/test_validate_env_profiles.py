@@ -202,7 +202,7 @@ def test_duplicate_declaration_line_is_an_error(tmp_path):
     ws = _workspace(tmp_path, GOOD_SMOKE, GOOD_RELEASE, ["imaging/run.py"])
     _write(ws, "imaging/run.py", "# ENV: jax\ncode\n# ENV: real_plots\n")
     errors, _ = validate_workspace(ws)
-    assert any("more than one '# ENV:'" in e for e in errors)
+    assert any("more than one env declaration" in e for e in errors)
 
 
 def test_valid_declaration_passes_and_round_trips(tmp_path):
