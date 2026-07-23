@@ -21,7 +21,15 @@ Plan JSON schema (written by _clone.py):
     target: str                       # e.g. autofit_assistant
     owner: str                        # GitHub owner to create under
     reference_path: str               # local checkout of the reference assistant
-    substitutions: [[old, new], ...]  # applied to paths AND file text, in order
+    substitutions: [[old, new], ...] or [[old, new, "word"], ...]
+                                      # applied to paths AND file text, in order.
+                                      # A two-element rule is a plain substring
+                                      # replace. A third element "word" anchors
+                                      # the match so `old` cannot start mid-word
+                                      # — required for short rules like the
+                                      # skill prefix `al_ -> ac_`, which would
+                                      # otherwise rewrite `total_draws` to
+                                      # `totac_draws`.
     generic: [path, ...]              # copy + substitute
     mixed: [path, ...]                # copy + substitute (adaptation queue in PENDING)
     domain: [path, ...]               # NOT copied; drives the PENDING growth queue
@@ -29,6 +37,7 @@ Plan JSON schema (written by _clone.py):
 """
 
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -52,8 +61,23 @@ Empty at birth — see PENDING.md at the repo root for what grows here.
 
 
 def substitute(text, subs):
-    for old, new in subs:
-        text = text.replace(old, new)
+    """Apply the plan's name substitutions to `text` (a path or file body).
+
+    A rule is `(old, new)` — a plain substring replace — or `(old, new, "word")`,
+    which additionally requires `old` to start at a word boundary. Short rules
+    need the anchor: the skill prefix `al_ -> ac_` exists to rename
+    `al_fit_model.md`, but as a bare replace it also rewrites the `al_` inside
+    `total_draws`, `external_shear` and `radial_minimum`. The anchor keeps the
+    rule working on file text (skills cross-reference each other by name in
+    prose, so a path-only rule would leave broken links) while refusing to match
+    mid-word.
+    """
+    for rule in subs:
+        old, new = rule[0], rule[1]
+        if len(rule) > 2 and rule[2] == "word":
+            text = re.sub(rf"(?<![A-Za-z0-9]){re.escape(old)}", new, text)
+        else:
+            text = text.replace(old, new)
     return text
 
 
