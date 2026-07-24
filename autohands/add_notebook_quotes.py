@@ -98,6 +98,11 @@ def add_notebook_quotes(lines: Iterable[str]):
     """
     Add %% above and below docs quotes with triple quotes.
 
+    A closing docstring does not emit its following code-cell marker until a
+    non-blank code line is seen. This prevents adjacent docstrings from
+    producing an empty code segment whose duplicate ``# %%`` markers are
+    interpreted as literal code by ``ipynb-py-convert``.
+
     Used for conversion to ipynb notebooks
 
     Parameters
@@ -112,18 +117,35 @@ def add_notebook_quotes(lines: Iterable[str]):
     lines = strip_env_declarations(list(lines))
     out = list()
     is_in_quotes = False
+    pending_code_boundary = False
+    pending_lines: List[str] = []
 
     for line in lines:
         if line.startswith('"""') or line.startswith("'''"):
             if is_in_quotes:
-                out.extend(["'''", "\n\n", "# %%\n"])
+                out.extend(["'''", "\n\n"])
+                pending_code_boundary = True
             else:
+                if pending_code_boundary:
+                    out.extend(pending_lines)
+                    pending_lines = []
+                    pending_code_boundary = False
                 out.extend(["# %%", "\n", "'''\n"])
 
             is_in_quotes = not is_in_quotes
+        elif pending_code_boundary:
+            if line.strip():
+                out.append("# %%\n")
+                out.extend(pending_lines)
+                pending_lines = []
+                pending_code_boundary = False
+                out.append(line)
+            else:
+                pending_lines.append(line)
         else:
             out.append(line)
 
+    out.extend(pending_lines)
     return out
 
 
