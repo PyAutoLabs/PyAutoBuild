@@ -48,7 +48,7 @@ def test_injects_after_leading_markdown(tmp_path):
     assert cells[1]["cell_type"] == "markdown"
     assert "Google Colab Setup" in "".join(cells[1]["source"])
     assert cells[2]["cell_type"] == "code"
-    assert 'setup_colab.setup("autolens")' in "".join(cells[2]["source"])
+    assert '_setup_colab.setup("autolens")' in "".join(cells[2]["source"])
     assert cells[3]["source"] == ["import autolens as al"]
 
 
@@ -61,13 +61,13 @@ def test_injects_at_top_when_no_leading_markdown(tmp_path):
 
     cells = json.loads(nb_path.read_text())["cells"]
     assert cells[0]["cell_type"] == "markdown"
-    assert 'setup_colab.setup("autofit")' in "".join(cells[1]["source"])
+    assert '_setup_colab.setup("autofit")' in "".join(cells[1]["source"])
 
 
 def test_skips_notebook_with_hand_written_setup(tmp_path):
     original = [
         markdown_cell("Title"),
-        code_cell("from autonerves import setup_colab\nsetup_colab.for_autolens()"),
+        code_cell("from autolens import setup_colab\nsetup_colab.for_autolens()"),
     ]
     nb_path = make_notebook(tmp_path / "start_here.ipynb", original)
 
@@ -87,11 +87,28 @@ def test_idempotent(tmp_path):
 
 
 def test_all_projects_accepted(tmp_path):
-    for project in sorted(build_util.COLAB_PROJECTS):
+    expected_projects = {
+        "autofit": "autofit",
+        "autogalaxy": "autogalaxy",
+        "autolens": "autolens",
+        "howtofit": "autofit",
+        "howtogalaxy": "autogalaxy",
+        "howtolens": "autolens",
+    }
+
+    assert build_util.COLAB_PROJECTS == expected_projects
+
+    for project, package in sorted(expected_projects.items()):
         nb_path = make_notebook(tmp_path / f"{project}.ipynb", [code_cell("x = 1")])
         assert build_util.inject_colab_setup(nb_path, project) is True
         cells = json.loads(nb_path.read_text())["cells"]
-        assert f'setup_colab.setup("{project}")' in "".join(cells[1]["source"])
+        source = "".join(cells[1]["source"])
+
+        assert f"from {package} import setup_colab as _setup_colab" in source
+        assert 'pip", "install", "autonerves", "--no-deps"' in source
+        assert 'import_module("autonerves.setup_colab")' in source
+        assert "from autonerves import setup_colab" not in source
+        assert f'_setup_colab.setup("{project}")' in source
 
 
 def test_unknown_project_raises(tmp_path):

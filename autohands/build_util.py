@@ -30,16 +30,17 @@ def py_to_notebook(filename: Path):
     return new_filename
 
 
-# Projects whose generated notebooks receive the Colab setup cell. Must stay in
-# sync with the `_PROJECTS` registry in PyAutoNerves's `autonerves/setup_colab.py` —
-# the injected cell calls `setup_colab.setup("<project>")` with this key.
+# Projects whose generated notebooks receive the Colab setup cell, mapped to
+# the public package through which local users access ``setup_colab``. The keys
+# must stay in sync with the `_PROJECTS` registry in PyAutoNerves's
+# `autonerves/setup_colab.py`.
 COLAB_PROJECTS = {
-    "autofit",
-    "autogalaxy",
-    "autolens",
-    "howtofit",
-    "howtogalaxy",
-    "howtolens",
+    "autofit": "autofit",
+    "autogalaxy": "autogalaxy",
+    "autolens": "autolens",
+    "howtofit": "autofit",
+    "howtogalaxy": "autogalaxy",
+    "howtolens": "autolens",
 }
 
 COLAB_SETUP_MARKDOWN = """__Google Colab Setup__
@@ -54,18 +55,19 @@ type" -> "Hardware accelerator" before running the notebook."""
 
 COLAB_SETUP_CODE = '''try:
     import google.colab
+except ImportError:
+    from {package} import setup_colab as _setup_colab
+else:
+    import importlib
     import subprocess
     import sys
 
     subprocess.check_call(
         [sys.executable, "-m", "pip", "install", "autonerves", "--no-deps"]
     )
-except ImportError:
-    pass
+    _setup_colab = importlib.import_module("autonerves.setup_colab")
 
-from autonerves import setup_colab
-
-setup_colab.setup("{project}")'''
+_setup_colab.setup("{project}")'''
 
 
 def inject_colab_setup(notebook_path, project: str):
@@ -107,7 +109,9 @@ def inject_colab_setup(notebook_path, project: str):
         "execution_count": None,
         "metadata": {},
         "outputs": [],
-        "source": COLAB_SETUP_CODE.format(project=project).splitlines(keepends=True),
+        "source": COLAB_SETUP_CODE.format(
+            project=project, package=COLAB_PROJECTS[project]
+        ).splitlines(keepends=True),
     }
 
     insert_at = 1 if cells and cells[0]["cell_type"] == "markdown" else 0
